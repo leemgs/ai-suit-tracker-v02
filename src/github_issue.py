@@ -48,7 +48,7 @@ def close_other_daily_issues(owner: str, repo: str, token: str, label: str, base
     closed: list[int] = []
     issues = list_open_issues_by_label(owner, repo, token, label)
     prefix = f"{base_title} ("
-    footer = f"다음 리포트: #{new_issue_number} ({new_issue_url})
+    footer = f"다음 리포트: #{new_issue_number} ({new_issue_url})"
 
 이 이슈는 다음 리포트 생성으로 자동 종료되었습니다."
     for it in issues:
