@@ -40,17 +40,17 @@ def close_issue(owner: str, repo: str, token: str, issue_number: int) -> None:
     r.raise_for_status()
 
 def close_other_daily_issues(owner: str, repo: str, token: str, label: str, base_title: str, today_title: str, new_issue_number: int, new_issue_url: str) -> list[int]:
-    """같은 라벨을 가진 모니터링 이슈 중 '오늘/현재' 이슈를 제외한 나머지 OPEN 이슈를 닫습니다.
-    - 대상: 제목이 `{base_title} (YYYY-MM-DD)` 형태로 시작하는 이슈
-    - 동작: Close 전에 '다음 리포트 링크' 코멘트를 남김
-    반환: 닫은 이슈 번호 리스트
-    """
+    """같은 라벨을 가진 모니터링 이슈 중 '오늘/현재' 이슈를 제외한 나머지 OPEN 이슈를 닫습니다."""
     closed: list[int] = []
     issues = list_open_issues_by_label(owner, repo, token, label)
     prefix = f"{base_title} ("
-    footer = f"다음 리포트: #{new_issue_number} ({new_issue_url})"
+    
+    # [수정] footer 문자열을 올바르게 합치고 따옴표를 닫았습니다.
+    footer = (
+        f"다음 리포트: #{new_issue_number} ({new_issue_url})\n\n"
+        "이 이슈는 다음 리포트 생성으로 자동 종료되었습니다."
+    )
 
-이 이슈는 다음 리포트 생성으로 자동 종료되었습니다."
     for it in issues:
         t = it.get("title") or ""
         if t == today_title:
@@ -61,7 +61,6 @@ def close_other_daily_issues(owner: str, repo: str, token: str, label: str, base
             comment_and_close_issue(owner, repo, token, num, footer)
             closed.append(num)
     return closed
-
 
 def comment_and_close_issue(owner: str, repo: str, token: str, issue_number: int, body: str) -> None:
     # 먼저 마무리 코멘트 작성
