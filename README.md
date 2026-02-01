@@ -48,6 +48,81 @@ Repository → Settings → Secrets and variables → Actions → New repository
 - 환경변수: `SHOW_DOCKET_CANDIDATES=1`
   - 기본값은 0(표시 안 함)
 
+### GitHub Actions Variables로 켜기(추천)
+1) GitHub 레포로 이동
+2) 상단 메뉴에서 **Settings**
+3) 왼쪽 사이드바에서 **Secrets and variables** → **Actions**
+4) 상단 탭에서 **Variables** 선택 (Secrets 탭이 아니라 Variables 탭)
+5) **New repository variable** 클릭
+6) 아래처럼 추가
+   - **Name**: `SHOW_DOCKET_CANDIDATES`
+   - **Value**: `1`
+
+- 끄려면
+  - Value를 `0`으로 바꾸거나,
+  - 변수를 삭제(미설정)하면 됩니다.
+
+> 참고: 이 프로젝트 workflow는 `${{ vars.SHOW_DOCKET_CANDIDATES }}`를 읽습니다.
+> Variables에만 값을 넣으면 되고, Secrets에 넣을 필요는 없습니다.
+
+### 로컬 실행 시 (.env)
+레포 루트의 `.env.example`를 복사해 `.env`를 만든 뒤 아래 값을 추가하세요.
+
+```
+SHOW_DOCKET_CANDIDATES=1
+```
+
+
+## (옵션) 긴 섹션 접기(<details>/<summary>)
+이슈가 길어질 때 가독성을 위해 아래 항목을 “접기” 형태로 렌더링할 수 있습니다.
+
+### A) 표 안의 긴 셀 접기(도켓 후보 Top3 / 최근 도켓 업데이트 3건)
+- 환경변수: `COLLAPSE_LONG_CELLS=1`
+  - `1`이면, 표의 **도켓 후보(Top3)** 및 **최근 도켓 업데이트(3)** 컬럼이 `<details>/<summary>`로 접혀서 표시됩니다.
+  - `0` 또는 미설정이면, 기존처럼 그대로 펼쳐서 표시합니다.
+
+#### GitHub Actions Variables로 켜기(추천)
+Repository → Settings → Secrets and variables → Actions → Variables → New repository variable
+
+- Name: `COLLAPSE_LONG_CELLS`
+- Value: `1`
+
+### B) "기사 주소" 섹션 접기
+- 환경변수: `COLLAPSE_ARTICLE_URLS=1`
+  - `1`이면, 각 항목의 기사 URL 목록이 `<details>/<summary>`로 접혀서 표시됩니다.
+  - `0` 또는 미설정이면, 기존처럼 그대로 펼쳐서 표시합니다.
+
+#### GitHub Actions Variables로 켜기(추천)
+Repository → Settings → Secrets and variables → Actions → Variables → New repository variable
+
+- Name: `COLLAPSE_ARTICLE_URLS`
+- Value: `1`
+
+### 로컬 실행 시 (.env)
+```
+COLLAPSE_LONG_CELLS=1
+COLLAPSE_ARTICLE_URLS=1
+```
+
+
+---
+
+## 문제 해결: GitHub Issue에서 표(테이블)가 텍스트로만 보이는 경우
+GitHub Issues의 Markdown 테이블은 아주 쉽게 깨집니다. 대표 원인은 아래 두 가지입니다.
+
+1) **구분선(---) 행이 유효하지 않음**
+   - 각 컬럼은 `---`처럼 **최소 3개의 하이픈**이 필요합니다.
+   - 예: `|---|---|---|` 형태
+
+2) **셀 값에 줄바꿈이 포함됨(행이 여러 줄로 분리됨)**
+   - 테이블은 **각 행이 한 줄**이어야 합니다.
+   - 셀 안에 줄바꿈이 필요하면 `\n` 대신 `<br>`를 사용해야 합니다.
+
+이 레포의 `src/render.py`는 위 문제를 피하도록,
+- 셀 내부 줄바꿈을 `<br>`로 변환하고
+- 유효한 구분선 행을 자동 생성합니다.
+
+
 ## 커스터마이징
 - `src/queries.py`에서 키워드 조정
 - `data/known_cases.yml`에 사건 매핑 추가
