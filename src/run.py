@@ -66,7 +66,9 @@ def main() -> None:
     if closed_nums:
         print(f"이전 날짜 이슈 자동 Close: {closed_nums}")
     
-    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    # KST 기준 타임스탬프
+    timestamp = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M KST")
+
     comment_body = f"\n\n{md}"
     create_comment(owner, repo, gh_token, issue_no, comment_body)
     print(f"Issue #{issue_no} 댓글 업로드 완료")
@@ -76,7 +78,7 @@ def main() -> None:
         f"*AI 소송 모니터링 업데이트* ({timestamp})",
         f"- 언론보도 기반 수집 건수: {len(lawsuits)}건",
         f"- 법원기록 기반 수집 건수: {len(cl_docs)}건",
-        f"- GitHub Issue: <{issue_url}|#{issue_no}>",
+        f"- GitHub Issue (For more details): <{issue_url}|#{issue_no}>",
     ]
     
     if cl_docs:
