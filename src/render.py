@@ -9,8 +9,21 @@ def _esc(s: str) -> str:
     GitHub Markdown table rules that commonly break rendering:
     - A literal '|' inside a cell must be escaped as '\\|'
     - Newlines inside a row break the table; use '<br>' instead.
+    - Fence blocks (``` or ~~~) can turn the entire comment into a code block.
     """
-    return (s or "").replace("|", "\\|").replace("\n", "<br>").strip()
+    s = (s or "")
+
+    # 1) CRLF/CR 정규화
+    s = s.replace("\r\n", "\n").replace("\r", "\n")
+
+    # 2) 코드 펜스 무력화 (댓글 전체가 코드블록으로 전환되는 것 방지)
+    #    HTML entity를 쓰면 GitHub에서 안전하게 텍스트로 표시됩니다.
+    s = s.replace("```", "&#96;&#96;&#96;")
+    s = s.replace("~~~", "&#126;&#126;&#126;")
+
+    # 3) 테이블 셀 안전화
+    return s.replace("|", "\\|").replace("\n", "<br>").strip()
+
 
 
 def _md_sep(col_count: int) -> str:
