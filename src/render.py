@@ -212,19 +212,15 @@ def render_markdown(
         else:
             lines.append("820 사건 없음\n")
 
-        lines.append("\n<details>")
-        lines.append(
-            "<summary><strong><span style=\"font-size:2.5em; font-weight:bold;\">📁 RECAP: Others</span></strong></summary>\n"
-        )
-
+        lines.append("## 🔥 RECAP: 820 Copyright\n")
+        lines.append("## 📁 RECAP: Others\n")
         if other_cases:
             render_case_table(other_cases)
         else:
             lines.append("Others 사건 없음\n")
 
-        lines.append("</details>\n")
 
-    # RECAP 문서
+    # RECAP 법원 문서 (.pdf format)
     if cl_docs:
         lines.append("## 📄 RECAP: 문서 기반 (Complaint/Petition 우선)")
         lines.append("| 제출일 | 케이스 | 문서유형 | 문서 |")
@@ -252,6 +248,25 @@ def render_markdown(
     lines.append("- AI 모델 학습과의 직접성 + 법적 리스크 강도를 수치화한 지표입니다.")
     lines.append("- 0에 가까울수록 → 간접/주변 이슈")
     lines.append("- 100에 가까울수록 → AI 학습 핵심 리스크 사건\n")
+    lines.append("")
+    
+    lines.append("### 📊 등급 기준")
+    lines.append("- 00~039 🟢 : 간접 연관")
+    lines.append("- 40~059 🟡 : 학습 쟁점 존재")
+    lines.append("- 60~079 ⚠️ : 모델 학습 직접 언급")
+    lines.append("- 80~100 🔥 : 무단 수집 + 학습 + 상업적 사용 고위험")
+    lines.append("")
+
+    lines.append("### 🧮 점수 산정 기준")
+    lines.append("| 항목 | 조건 | 점수 |")
+    lines.append("|---|---|---|")
+    lines.append("| 무단 데이터 수집 명시 | scrape / crawl / ingest | +30 |")
+    lines.append("| 모델 학습 직접 언급 | train / training / model | +30 |")
+    lines.append("| 상업적 사용 | commercial / profit | +15 |")
+    lines.append("| 저작권 소송 (820) | Nature = 820 | +15 |")
+    lines.append("| 집단소송 | class action | +10 |")
+    lines.append("")
+
     lines.append("</details>\n")
 
     return "\n".join(lines) or ""
