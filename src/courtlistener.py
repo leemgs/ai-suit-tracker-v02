@@ -83,11 +83,34 @@ def _safe_str(x) -> str:
     return str(x).strip() if x is not None else ""
 
 
+
+_court_cache = {}
+
 def _build_court_meta(court_raw: str) -> tuple[str, str]:
     court_raw = _safe_str(court_raw)
     if not court_raw or court_raw == "미확인":
         return "미확인", ""
-    return court_raw, f"https://www.courtlistener.com/court/{court_raw}/"
+
+    # If already full API URL
+    if court_raw.startswith("http"):
+        court_api_url = court_raw
+    elif court_raw.startswith("/"):
+        court_api_url = BASE + court_raw
+    else:
+        # fallback (legacy slug)
+        court_api_url = f"{BASE}/api/rest/v4/courts/{court_raw}/"
+
+    if court_api_url in _court_cache:
+        return _court_cache[court_api_url], court_api_url
+
+    data = _get(court_api_url)
+    if data and data.get("short_name"):
+        short_name = data.get("short_name")
+        _court_cache[court_api_url] = short_name
+        return short_name, court_api_url
+
+    # fallback
+    return court_raw, court_api_url
 
 
 def _headers() -> Dict[str, str]:
