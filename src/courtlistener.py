@@ -365,9 +365,8 @@ def build_case_summary_from_docket_id(docket_id: int) -> Optional[CLCaseSummary]
     complaint_doc_no = "미확인"
     complaint_link = ""
     complaint_type = "미확인"
-
+    
     url = DOCKET_ENTRIES_URL
-    params = {"docket": docket_id}
     params = {"docket": docket_id, "page_size": 100}
 
     complaints = []
@@ -375,9 +374,10 @@ def build_case_summary_from_docket_id(docket_id: int) -> Optional[CLCaseSummary]
     while url:
         data = _get(url, params=params) if params else _get(url)
         params = None
-        if not data:
+       if not data:
             break
 
+        for e in data.get("results", []):
             desc = " ".join([
                 _safe_str(e.get("description")),
                 _safe_str(e.get("docket_text")),
@@ -388,6 +388,7 @@ def build_case_summary_from_docket_id(docket_id: int) -> Optional[CLCaseSummary]
                 complaints.append(e)
 
         url = data.get("next")
+
         
     if complaints:
         complaints.sort(
