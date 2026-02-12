@@ -291,7 +291,6 @@ def build_complaint_documents_from_hits(
     return out
 
 
-
 def build_case_summary_from_docket_id(docket_id: int) -> Optional[CLCaseSummary]:
     docket = _get(DOCKET_URL.format(id=docket_id))
     if not docket:
@@ -337,10 +336,7 @@ def build_case_summary_from_docket_id(docket_id: int) -> Optional[CLCaseSummary]
         or "미확인"
     )
 
-    parties = (
-        _safe_str(docket.get("party_summary"))
-        or "미확인"
-    )
+    parties = _safe_str(docket.get("party_summary")) or "미확인"
 
     recent_updates = (
         _safe_str(docket.get("date_modified"))[:10]
@@ -348,16 +344,48 @@ def build_case_summary_from_docket_id(docket_id: int) -> Optional[CLCaseSummary]
         or "미확인"
     )
 
+    # --------------------------------------------------
+    # Complaint 찾기 (pagination + PDF 추출)
+    # --------------------------------------------------
+
     complaint_doc_no = "미확인"
     complaint_link = ""
 
-    entries = _get(DOCKET_ENTRIES_URL, params={"docket": docket_id}) or {}
-    for e in entries.get("results", []):
-        desc = _safe_str(e.get("description")).lower()
-        if "complaint" in desc:
-            complaint_doc_no = _safe_str(e.get("entry_number")) or "미확인"
-            complaint_link = _abs_url(e.get("absolute_url") or "")
+    url = DOCKET_ENTRIES_URL
+    params = {"docket": docket_id}
+
+    while url:
+        data = _get(url, params=params) if params else _get(url)
+        params = None
+        if not data:
             break
+
+        for e in data.get("results", []):
+            desc = _safe_str(e.get("description")).lower()
+
+            if any(k in desc for k in COMPLAINT_KEYWORDS):
+                complaint_doc_no = _safe_str(e.get("entry_number")) or "미확인"
+
+                entry_id = e.get("id")
+
+                # recap-documents 조회 → PDF 직접 링크
+                recap = _get(RECAP_DOCS_URL, params={"docket_entry": entry_id}) or {}
+                docs = recap.get("results", [])
+
+                if docs:
+                    pdf_path = docs[0].get("filepath_local") or ""
+                    complaint_link = _abs_url(pdf_path)
+                else:
+                    complaint_link = _abs_url(e.get("absolute_url") or "")
+
+                break
+
+        if complaint_doc_no != "미확인":
+            break
+
+        url = data.get("next")
+
+    # --------------------------------------------------
 
     return CLCaseSummary(
         docket_id=docket_id,
