@@ -69,6 +69,7 @@ class CLCaseSummary:
     parties: str
     complaint_doc_no: str
     complaint_link: str
+    complaint_type: str
     recent_updates: str
     extracted_causes: str
     extracted_ai_snippet: str
@@ -83,6 +84,22 @@ def _safe_str(x) -> str:
     return str(x).strip() if x is not None else ""
 
 
+def _detect_complaint_type(desc: str) -> str:
+    d = desc.lower()
+
+    if "second amended" in d:
+        return "Second Amended"
+    if "third amended" in d:
+        return "Third Amended"
+    if "amended" in d:
+        return "Amended"
+    if "class action" in d:
+        return "Class Action"
+    if "petition" in d:
+        return "Petition"
+
+    return "Original"
+
 
 _court_cache = {}
 
@@ -91,13 +108,11 @@ def _build_court_meta(court_raw: str) -> tuple[str, str]:
     if not court_raw or court_raw == "미확인":
         return "미확인", ""
 
-    # If already full API URL
     if court_raw.startswith("http"):
         court_api_url = court_raw
     elif court_raw.startswith("/"):
         court_api_url = BASE + court_raw
     else:
-        # fallback (legacy slug)
         court_api_url = f"{BASE}/api/rest/v4/courts/{court_raw}/"
 
     if court_api_url in _court_cache:
@@ -109,7 +124,6 @@ def _build_court_meta(court_raw: str) -> tuple[str, str]:
         _court_cache[court_api_url] = short_name
         return short_name, court_api_url
 
-    # fallback
     return court_raw, court_api_url
 
 
@@ -117,7 +131,7 @@ def _headers() -> Dict[str, str]:
     token = os.getenv("COURTLISTENER_TOKEN", "").strip()
     headers = {
         "Accept": "application/json",
-        "User-Agent": "ai-lawsuit-monitor/1.4",
+        "User-Agent": "ai-lawsuit-monitor/2.0",
     }
     if token:
         headers["Authorization"] = f"Token {token}"
@@ -203,94 +217,6 @@ def build_case_summaries_from_docket_numbers(docket_numbers: List[str]) -> List[
     return out
 
 
-def build_case_summaries_from_case_titles(case_titles: List[str]) -> List[CLCaseSummary]:
-    out = []
-    for ct in case_titles:
-        hits = search_recent_documents(ct, days=365, max_results=5)
-        out.extend(build_case_summaries_from_hits(hits))
-    return out
-
-
-def build_case_summaries_from_hits(hits: List[dict]) -> List[CLCaseSummary]:
-    out = []
-    for hit in hits:
-        did = _pick_docket_id(hit)
-        if did:
-            s = build_case_summary_from_docket_id(did)
-            if s:
-                out.append(s)
-    return out
-
-
-def build_documents_from_docket_ids(docket_ids: List[int], days: int = 3) -> List[CLDocument]:
-    hits = [{"docket_id": did} for did in docket_ids]
-    return build_complaint_documents_from_hits(hits)
-
-def build_complaint_documents_from_hits(
-    hits: List[dict],
-    days: int = 3
-) -> List[CLDocument]:
-
-    out = []
-
-    now = datetime.now(timezone.utc)
-    cutoff = now - timedelta(days=days)
-
-    for hit in hits:
-        did = _pick_docket_id(hit)
-        if not did:
-            continue
-
-        docket = _get(DOCKET_URL.format(id=did)) or {}
-        case_name = _safe_str(docket.get("case_name")) or "미확인"
-        docket_number = _safe_str(docket.get("docket_number")) or "미확인"
-        court = _safe_str(docket.get("court")) or "미확인"
-
-        recap = _get(RECAP_DOCS_URL, params={"docket": did}) or {}
-        docs = recap.get("results", [])
-
-        for d in docs:
-            desc = _safe_str(d.get("description")).lower()
-            if not any(k in desc for k in COMPLAINT_KEYWORDS):
-                continue
-
-            date_filed = _safe_str(d.get("date_filed"))[:10]
-            if date_filed:
-                try:
-                    dt = datetime.fromisoformat(date_filed).replace(tzinfo=timezone.utc)
-                    if dt < cutoff:
-                        continue
-                except Exception:
-                    pass
-
-            pdf_url = _abs_url(d.get("filepath_local") or "")
-            snippet = extract_pdf_text(pdf_url, max_chars=3000) if pdf_url else ""
-
-            p_ex, d_ex = extract_parties_from_caption(snippet) if snippet else ("미확인", "미확인")
-            causes = detect_causes(snippet) if snippet else []
-            ai_snip = extract_ai_training_snippet(snippet) if snippet else ""
-
-            out.append(CLDocument(
-                docket_id=did,
-                docket_number=docket_number,
-                case_name=case_name,
-                court=court,
-                date_filed=date_filed,
-                doc_type="Complaint",
-                doc_number=_safe_str(d.get("document_number")),
-                description=_safe_str(d.get("description")),
-                document_url=_abs_url(d.get("absolute_url") or ""),
-                pdf_url=pdf_url,
-                pdf_text_snippet=snippet,
-                extracted_plaintiff=p_ex,
-                extracted_defendant=d_ex,
-                extracted_causes=", ".join(causes) if causes else "미확인",
-                extracted_ai_snippet=ai_snip,
-            ))
-
-    return out
-
-
 def build_case_summary_from_docket_id(docket_id: int) -> Optional[CLCaseSummary]:
     docket = _get(DOCKET_URL.format(id=docket_id))
     if not docket:
@@ -304,12 +230,7 @@ def build_case_summary_from_docket_id(docket_id: int) -> Optional[CLCaseSummary]
     date_filed = _safe_str(docket.get("date_filed"))[:10]
     date_terminated = _safe_str(docket.get("date_terminated"))[:10]
 
-    if date_terminated:
-        status = f"종결 ({date_terminated})"
-    elif date_filed:
-        status = "진행중"
-    else:
-        status = "미확인"
+    status = f"종결 ({date_terminated})" if date_terminated else ("진행중" if date_filed else "미확인")
 
     judge = (
         _safe_str(docket.get("assigned_to_str"))
@@ -344,15 +265,14 @@ def build_case_summary_from_docket_id(docket_id: int) -> Optional[CLCaseSummary]
         or "미확인"
     )
 
-    # --------------------------------------------------
-    # Complaint 찾기 (pagination + PDF 추출)
-    # --------------------------------------------------
+    # ==================================================
+    # 최신 Complaint 찾기
+    # ==================================================
 
-    complaint_doc_no = "미확인"
-    complaint_link = ""
+    complaints = []
 
     url = DOCKET_ENTRIES_URL
-    params = {"docket": docket_id}
+    params = {"docket": docket_id, "page_size": 100}
 
     while url:
         data = _get(url, params=params) if params else _get(url)
@@ -362,30 +282,40 @@ def build_case_summary_from_docket_id(docket_id: int) -> Optional[CLCaseSummary]
 
         for e in data.get("results", []):
             desc = _safe_str(e.get("description")).lower()
-
             if any(k in desc for k in COMPLAINT_KEYWORDS):
-                complaint_doc_no = _safe_str(e.get("entry_number")) or "미확인"
-
-                entry_id = e.get("id")
-
-                # recap-documents 조회 → PDF 직접 링크
-                recap = _get(RECAP_DOCS_URL, params={"docket_entry": entry_id}) or {}
-                docs = recap.get("results", [])
-
-                if docs:
-                    pdf_path = docs[0].get("filepath_local") or ""
-                    complaint_link = _abs_url(pdf_path)
-                else:
-                    complaint_link = _abs_url(e.get("absolute_url") or "")
-
-                break
-
-        if complaint_doc_no != "미확인":
-            break
+                complaints.append(e)
 
         url = data.get("next")
 
-    # --------------------------------------------------
+    complaint_doc_no = "미확인"
+    complaint_link = ""
+    complaint_type = "미확인"
+
+    if complaints:
+        complaints.sort(
+            key=lambda x: _safe_str(x.get("date_filed")),
+            reverse=True
+        )
+
+        latest = complaints[0]
+
+        complaint_doc_no = _safe_str(latest.get("entry_number")) or "미확인"
+        desc_text = _safe_str(latest.get("description"))
+        complaint_type = _detect_complaint_type(desc_text)
+
+        entry_id = latest.get("id")
+
+        recap = _get(RECAP_DOCS_URL, params={"docket_entry": entry_id}) or {}
+        docs = recap.get("results", [])
+
+        if docs:
+            pdf_path = docs[0].get("filepath_local") or ""
+            complaint_link = _abs_url(pdf_path)
+
+        if not complaint_link:
+            complaint_link = _abs_url(latest.get("absolute_url") or "")
+
+    # ==================================================
 
     return CLCaseSummary(
         docket_id=docket_id,
@@ -403,8 +333,8 @@ def build_case_summary_from_docket_id(docket_id: int) -> Optional[CLCaseSummary]
         parties=parties,
         complaint_doc_no=complaint_doc_no,
         complaint_link=complaint_link,
+        complaint_type=complaint_type,
         recent_updates=recent_updates,
         extracted_causes="미확인",
         extracted_ai_snippet="",
     )
-
