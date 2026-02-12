@@ -414,7 +414,7 @@ def build_case_summary_from_docket_id(docket_id: int) -> Optional[CLCaseSummary]
             doc_num = _safe_str(first_doc.get("document_number"))
             if doc_num:
                 complaint_doc_no = doc_num
-            
+
             pdf_path = first_doc.get("filepath_local") or ""
             if pdf_path:
                 complaint_link = _abs_url(pdf_path)
