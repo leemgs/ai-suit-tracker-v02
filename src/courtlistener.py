@@ -291,6 +291,7 @@ def build_complaint_documents_from_hits(
     return out
 
 
+
 def build_case_summary_from_docket_id(docket_id: int) -> Optional[CLCaseSummary]:
     docket = _get(DOCKET_URL.format(id=docket_id))
     if not docket:
@@ -301,6 +302,63 @@ def build_case_summary_from_docket_id(docket_id: int) -> Optional[CLCaseSummary]
     court = _safe_str(docket.get("court")) or "미확인"
     court_short_name, court_api_url = _build_court_meta(court)
 
+    date_filed = _safe_str(docket.get("date_filed"))[:10]
+    date_terminated = _safe_str(docket.get("date_terminated"))[:10]
+
+    if date_terminated:
+        status = f"종결 ({date_terminated})"
+    elif date_filed:
+        status = "진행중"
+    else:
+        status = "미확인"
+
+    judge = (
+        _safe_str(docket.get("assigned_to_str"))
+        or _safe_str(docket.get("assigned_to"))
+        or "미확인"
+    )
+
+    magistrate = (
+        _safe_str(docket.get("referred_to_str"))
+        or _safe_str(docket.get("referred_to"))
+        or "미확인"
+    )
+
+    nature_of_suit = (
+        _safe_str(docket.get("nature_of_suit"))
+        or _safe_str(docket.get("nature_of_suit_display"))
+        or _safe_str(docket.get("nos"))
+        or "미확인"
+    )
+
+    cause = (
+        _safe_str(docket.get("cause"))
+        or _safe_str(docket.get("cause_of_action"))
+        or "미확인"
+    )
+
+    parties = (
+        _safe_str(docket.get("party_summary"))
+        or "미확인"
+    )
+
+    recent_updates = (
+        _safe_str(docket.get("date_modified"))[:10]
+        or _safe_str(docket.get("date_last_filing"))[:10]
+        or "미확인"
+    )
+
+    complaint_doc_no = "미확인"
+    complaint_link = ""
+
+    entries = _get(DOCKET_ENTRIES_URL, params={"docket": docket_id}) or {}
+    for e in entries.get("results", []):
+        desc = _safe_str(e.get("description")).lower()
+        if "complaint" in desc:
+            complaint_doc_no = _safe_str(e.get("entry_number")) or "미확인"
+            complaint_link = _abs_url(e.get("absolute_url") or "")
+            break
+
     return CLCaseSummary(
         docket_id=docket_id,
         case_name=case_name,
@@ -308,16 +366,17 @@ def build_case_summary_from_docket_id(docket_id: int) -> Optional[CLCaseSummary]
         court=court,
         court_short_name=court_short_name,
         court_api_url=court_api_url,
-        date_filed=_safe_str(docket.get("date_filed"))[:10] or "미확인",
-        status="진행중/미확인",
-        judge="미확인",
-        magistrate="미확인",
-        nature_of_suit="미확인",
-        cause="미확인",
-        parties="미확인",
-        complaint_doc_no="미확인",
-        complaint_link="",
-        recent_updates="미확인",
+        date_filed=date_filed or "미확인",
+        status=status,
+        judge=judge,
+        magistrate=magistrate,
+        nature_of_suit=nature_of_suit,
+        cause=cause,
+        parties=parties,
+        complaint_doc_no=complaint_doc_no,
+        complaint_link=complaint_link,
+        recent_updates=recent_updates,
         extracted_causes="미확인",
         extracted_ai_snippet="",
     )
+
