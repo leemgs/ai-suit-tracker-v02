@@ -421,9 +421,9 @@ def build_case_summary_from_docket_id(docket_id: int) -> Optional[CLCaseSummary]
 
         # Fallback to docket entry URL if no PDF link found
         if not complaint_link:
-            entry_url = latest.get("absolute_url")
+            entry_url = _safe_str(latest.get("absolute_url") or "")
             if entry_url:
-                complaint_link = _abs_url(_safe_str(entry_url))
+                complaint_link = _abs_url(entry_url)
     
     # --------------------------------------------------
 
