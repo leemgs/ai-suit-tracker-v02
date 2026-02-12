@@ -69,6 +69,7 @@ class CLCaseSummary:
     parties: str
     complaint_doc_no: str
     complaint_link: str
+    complaint_type: str
     recent_updates: str
     extracted_causes: str
     extracted_ai_snippet: str
@@ -82,6 +83,19 @@ class CLCaseSummary:
 def _safe_str(x) -> str:
     return str(x).strip() if x is not None else ""
 
+def _detect_complaint_type(desc: str) -> str:
+    d = desc.lower()
+    if "second amended" in d:
+        return "Second Amended"
+    if "third amended" in d:
+        return "Third Amended"
+    if "amended" in d:
+        return "Amended"
+    if "class action" in d:
+        return "Class Action"
+    if "petition" in d:
+        return "Petition"
+    return "Original"
 
 
 _court_cache = {}
@@ -350,9 +364,13 @@ def build_case_summary_from_docket_id(docket_id: int) -> Optional[CLCaseSummary]
 
     complaint_doc_no = "미확인"
     complaint_link = ""
+    complaint_type = "미확인"
 
     url = DOCKET_ENTRIES_URL
     params = {"docket": docket_id}
+    params = {"docket": docket_id, "page_size": 100}
+
+    complaints = []
 
     while url:
         data = _get(url, params=params) if params else _get(url)
@@ -364,27 +382,34 @@ def build_case_summary_from_docket_id(docket_id: int) -> Optional[CLCaseSummary]
             desc = _safe_str(e.get("description")).lower()
 
             if any(k in desc for k in COMPLAINT_KEYWORDS):
-                complaint_doc_no = _safe_str(e.get("entry_number")) or "미확인"
-
-                entry_id = e.get("id")
-
-                # recap-documents 조회 → PDF 직접 링크
-                recap = _get(RECAP_DOCS_URL, params={"docket_entry": entry_id}) or {}
-                docs = recap.get("results", [])
-
-                if docs:
-                    pdf_path = docs[0].get("filepath_local") or ""
-                    complaint_link = _abs_url(pdf_path)
-                else:
-                    complaint_link = _abs_url(e.get("absolute_url") or "")
-
-                break
-
-        if complaint_doc_no != "미확인":
-            break
+                complaints.append(e)
 
         url = data.get("next")
+        
+    if complaints:
+        complaints.sort(
+            key=lambda x: _safe_str(x.get("date_filed")),
+            reverse=True
+        )
 
+        latest = complaints[0]
+
+        complaint_doc_no = _safe_str(latest.get("entry_number")) or "미확인"
+        desc_text = _safe_str(latest.get("description"))
+        complaint_type = _detect_complaint_type(desc_text)
+
+        entry_id = latest.get("id")
+
+        recap = _get(RECAP_DOCS_URL, params={"docket_entry": entry_id}) or {}
+        docs = recap.get("results", [])
+
+        if docs:
+            pdf_path = docs[0].get("filepath_local") or ""
+            complaint_link = _abs_url(pdf_path)
+
+        if not complaint_link:
+            complaint_link = _abs_url(latest.get("absolute_url") or "")
+    
     # --------------------------------------------------
 
     return CLCaseSummary(
@@ -403,6 +428,7 @@ def build_case_summary_from_docket_id(docket_id: int) -> Optional[CLCaseSummary]
         parties=parties,
         complaint_doc_no=complaint_doc_no,
         complaint_link=complaint_link,
+        complaint_type=complaint_type,
         recent_updates=recent_updates,
         extracted_causes="미확인",
         extracted_ai_snippet="",
