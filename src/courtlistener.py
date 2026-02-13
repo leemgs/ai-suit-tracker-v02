@@ -411,8 +411,8 @@ def build_case_summary_from_docket_id(docket_id: int) -> Optional[CLCaseSummary]
 
         latest = found_entries[0]
         
-        # Keep document number as "미확인" as per requirements
-        complaint_doc_no = "미확인"
+        # Try to get entry_number from docket entry as fallback
+        complaint_doc_no = _safe_str(latest.get("entry_number")) or "미확인"
         desc_text = _safe_str(latest.get("description"))
         complaint_type = _detect_complaint_type(desc_text)
 
@@ -428,6 +428,8 @@ def build_case_summary_from_docket_id(docket_id: int) -> Optional[CLCaseSummary]
             actual_docs.sort(key=lambda x: (not bool(x.get("filepath_local")), x.get("document_number") or "999"))
             
             best_doc = actual_docs[0]
+            doc_num = _safe_str(best_doc.get("document_number"))
+            if doc_num: complaint_doc_no = doc_num
 
             pdf_path = best_doc.get("filepath_local") or ""
             if pdf_path:
