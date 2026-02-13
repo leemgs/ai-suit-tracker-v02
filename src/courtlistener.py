@@ -15,6 +15,8 @@ from .complaint_parse import (
 )
 
 BASE = "https://www.courtlistener.com"
+STORAGE_BASE = "https://storage.courtlistener.com"
+
 SEARCH_URL = BASE + "/api/rest/v4/search/"
 DOCKET_URL = BASE + "/api/rest/v4/dockets/{id}/"
 DOCKETS_LIST_URL = BASE + "/api/rest/v4/dockets/"
@@ -157,6 +159,39 @@ def _abs_url(u: str) -> str:
     if u.startswith("pdf/") or u.startswith("gov.uscourts"):
         return "https://storage.courtlistener.com/recap/" + u
     return u
+
+
+# =====================================================
+# NEW: HTML Parsing for PDF (No API Required)
+# =====================================================
+
+def _extract_first_pdf_from_docket_html(docket_id: int) -> str:
+    """
+    Fetch docket HTML page and extract the first PDF link.
+    """
+    try:
+        url = f"{BASE}/docket/{docket_id}/"
+        r = requests.get(url, timeout=25)
+        if r.status_code != 200:
+            return ""
+
+        html = r.text
+
+        # Find first storage.courtlistener.com PDF
+        match = re.search(
+            r"https://storage\.courtlistener\.com/recap/[^\"']+?\.pdf",
+            html,
+            re.IGNORECASE
+        )
+
+        if match:
+            return match.group(0)
+
+    except Exception:
+        pass
+
+    return ""
+
 
 # =====================================================
 # Search
@@ -416,32 +451,19 @@ def build_case_summary_from_docket_id(docket_id: int) -> Optional[CLCaseSummary]
         desc_text = _safe_str(latest.get("description"))
         complaint_type = _detect_complaint_type(desc_text)
 
-        entry_id = latest.get("id")
+        # --------------------------------------------------
+        # NEW LOGIC: Parse HTML to get first PDF link
+        # --------------------------------------------------
+        pdf_url = _extract_first_pdf_from_docket_html(docket_id)
 
-        recap = _get(RECAP_DOCS_URL, params={"docket_entry": entry_id, "page_size": 100}) or {}
-        actual_docs = recap.get("results", [])
+        if pdf_url:
+            complaint_link = f"[PDF]({pdf_url})"
 
-        if actual_docs:
-
-            # Look for the primary document (usually document_number 1 or 0)
-            # or the one with a filepath_local available
-            actual_docs.sort(key=lambda x: (not bool(x.get("filepath_local")), x.get("document_number") or "999"))
-            
-            best_doc = actual_docs[0]
-            doc_num = _safe_str(best_doc.get("document_number"))
-            if doc_num: complaint_doc_no = doc_num
-
-            pdf_path = best_doc.get("filepath_local") or ""
-            if pdf_path:
-                complaint_link = _abs_url(pdf_path)
-                
-                # --- NEW EXTRACTION LOGIC FOR SUMMARY ---
-                # This triggers the PDF reader to get the AI snippets
-                snippet = extract_pdf_text(complaint_link, max_chars=4000)
-                if snippet:
-                    extracted_ai_snippet = extract_ai_training_snippet(snippet) or ""
-                    causes_list = detect_causes(snippet)
-                    extracted_causes = ", ".join(causes_list) if causes_list else "미확인"
+            snippet = extract_pdf_text(pdf_url, max_chars=4000)
+            if snippet:
+                extracted_ai_snippet = extract_ai_training_snippet(snippet) or ""
+                causes_list = detect_causes(snippet)
+                extracted_causes = ", ".join(causes_list) if causes_list else "미확인"
                 # ----------------------------------------
 
         # Fallback: RECAP PDF 없으면 docket entry 링크 사용
