@@ -27,7 +27,6 @@ jobs:
 
       - name: Run monitor
         env:
-          COURTLISTENER_TOKEN: ${{ secrets.COURTLISTENER_TOKEN }}
           GITHUB_OWNER: ${{ github.repository_owner }}
           GITHUB_REPO: ${{ github.event.repository.name }}
           GITHUB_TOKEN: ${{ github.token }}
