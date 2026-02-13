@@ -109,6 +109,7 @@ def calculate_case_risk_score(case: CLCaseSummary) -> int:
 # =====================================================
 def render_markdown(
     lawsuits: List[Lawsuit],
+    cl_docs: List[CLDocument],
     cl_cases: List[CLCaseSummary],
     lookback_days: int = 3,
 ) -> str:
@@ -121,7 +122,7 @@ def render_markdown(
     lines.append("|---|---|")
     lines.append(f"| 📰 뉴스 수집 | **{len(lawsuits)}** |")
     lines.append(f"| ⚖️ RECAP 사건 | **{len(cl_cases)}** |")
-    lines.append(f"\n")
+    lines.append(f"| 📄 RECAP 문서 | **{len(cl_docs)}** |\n")
 
     # Nature 통계
     if cl_cases:
@@ -222,6 +223,18 @@ def render_markdown(
         else:
             lines.append("Others 사건 없음\n")
 
+
+    # RECAP 법원 문서 (.pdf format)
+    if cl_docs:
+        lines.append("## 📄 RECAP: 문서 기반 (Complaint/Petition 우선)")
+        lines.append("| 제출일 | 케이스 | 문서유형 | 문서 |")
+        lines.append(_md_sep(4))
+        for d in cl_docs:
+            link = d.document_url or d.pdf_url
+            lines.append(
+                f"| {_esc(d.date_filed)} | {_esc(d.case_name)} | "
+                f"{_esc(d.doc_type)} | {_mdlink('Document', link)} |"
+            )
 
     # 기사 주소
     if lawsuits:
