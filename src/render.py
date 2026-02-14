@@ -195,6 +195,14 @@ def render_markdown(
             lines.append(_md_sep(14))
 
             for idx, c in enumerate(sorted(cases, key=lambda x: x.date_filed, reverse=True), start=1):
+            # 🔥 최근 도켓 업데이트 기준 내림차순 정렬
+            sorted_cases = sorted(
+                cases,
+                key=lambda x: x.recent_updates or "",
+                reverse=True
+            )
+
+            for idx, c in enumerate(sorted_cases, start=1):                
                 slug = _slugify_case_name(c.case_name)
                 docket_url = f"https://www.courtlistener.com/docket/{c.docket_id}/{slug}/"
       
