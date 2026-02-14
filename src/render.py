@@ -147,10 +147,10 @@ def render_markdown(
     if lawsuits:
         print(f"[DEBUG] '뉴스/RSS 기반 소송 요약' is printed.")            
         lines.append("## 📰 뉴스/RSS 기반 소송 요약")
-        lines.append("| 일자 | 제목 | 소송번호 | 사유 | 위험도 예측 점수 |")
-        lines.append(_md_sep(5))
+        lines.append("| No. | 일자 | 제목 | 소송번호 | 사유 | 위험도 예측 점수 |")
+        lines.append(_md_sep(6))
 
-        for s in lawsuits:
+        for idx, s in enumerate(lawsuits, start=1):
             article_url = s.article_urls[0] if getattr(s, "article_urls", None) else ""
             title_cell = _mdlink(s.article_title or s.case_title, article_url)
 
@@ -159,7 +159,8 @@ def render_markdown(
             )
 
             lines.append(
-                f"| {_esc(s.update_or_filed_date)} | "
+                f"| {idx} | "
+                f"{_esc(s.update_or_filed_date)} | "
                 f"{title_cell} | "
                 f"{_esc(s.case_number)} | "
                 f"{_short(s.reason)} | "
@@ -187,13 +188,13 @@ def render_markdown(
 
         def render_case_table(cases: List[CLCaseSummary]):
             lines.append(
-                "| 상태 | 케이스명 | 도켓번호 | Nature | 위험도 | "
+                "| No. | 상태 | 케이스명 | 도켓번호 | Nature | 위험도 | "
                 "소송이유 | AI학습관련 핵심주장 | 법적 근거 | 담당판사 | 법원 | "
                 "Complaint 문서 번호 | Complaint PDF 링크 | 최근 도켓 업데이트 |"
             )
-            lines.append(_md_sep(13))
+            lines.append(_md_sep(14))
 
-            for c in sorted(cases, key=lambda x: x.date_filed, reverse=True):
+            for idx, c in enumerate(sorted(cases, key=lambda x: x.date_filed, reverse=True), start=1):
                 slug = _slugify_case_name(c.case_name)
                 docket_url = f"https://www.courtlistener.com/docket/{c.docket_id}/{slug}/"
       
@@ -241,7 +242,8 @@ def render_markdown(
                 print(f"        extracted_ai_len={len(c.extracted_ai_snippet or '')}")
 
                 lines.append(
-                    f"| {_esc(c.status)} | "
+                    f"| {idx} | "
+                    f"{_esc(c.status)} | "
                     f"{_mdlink(c.case_name, docket_url)} | "
                     f"{_mdlink(c.docket_number, docket_url)} | "
                     f"{_esc(c.nature_of_suit)} | "
@@ -274,8 +276,8 @@ def render_markdown(
     if cl_docs:
         lines.append("<details>")        
         lines.append("<summary><strong><span style=\"font-size:2.5em; font-weight:bold;\">📄 RECAP: 법원 문서 기반 (Complaint/Petition 우선)</span></strong></summary>\n")
-        lines.append("| 제출일 | 케이스 | 문서유형 | 법원 문서 |")
-        lines.append(_md_sep(4))
+        lines.append("| No. | 제출일 | 케이스 | 문서유형 | 법원 문서 |")
+        lines.append(_md_sep(5))
 
         # 🔥 제출일 기준 내림차순 정렬
         sorted_docs = sorted(
@@ -284,10 +286,11 @@ def render_markdown(
             reverse=True
         )
 
-        for d in sorted_docs:
+        for idx, d in enumerate(sorted_docs, start=1):
             link = d.document_url or d.pdf_url
             lines.append(
-                f"| {_esc(d.date_filed)} | {_esc(d.case_name)} | "
+                f"| {idx} | "
+                f"{_esc(d.date_filed)} | {_esc(d.case_name)} | "
                 f"{_esc(d.doc_type)} | {_mdlink('📄', link)} |"
             )
         lines.append("</details>\n")
