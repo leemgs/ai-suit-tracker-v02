@@ -379,8 +379,8 @@ def build_complaint_documents_from_hits(
         # =====================================================
         if not docs:
             if recap_doc_count == 0:            
-            print("[DEBUG] RECAP empty → HTML fallback activated")
-            html_pdf_url = _extract_first_pdf_from_docket_html(did)
+                print("[DEBUG] RECAP empty → HTML fallback activated")
+                html_pdf_url = _extract_first_pdf_from_docket_html(did)
 
             if html_pdf_url:
                 snippet = extract_pdf_text(html_pdf_url, max_chars=3000)
