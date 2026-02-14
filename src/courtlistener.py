@@ -585,6 +585,16 @@ def build_case_summary_from_docket_id(docket_id: int) -> Optional[CLCaseSummary]
     if complaint_link:
         print(f"[DEBUG] Extracting PDF text from: {complaint_link}")        
         snippet = extract_pdf_text(complaint_link, max_chars=4000)
+
+        print(f"[DEBUG] PDF snippet length={len(snippet) if snippet else 0}")
+
+        if snippet:
+            print("[DEBUG] ===== PDF TEXT PREVIEW BEGIN =====")
+            print(snippet[:1000])
+            print("[DEBUG] ===== PDF TEXT PREVIEW END =====")
+        else:
+            print("[DEBUG] PDF text extraction returned EMPTY STRING")
+        
         print(f"[DEBUG] PDF snippet length={len(snippet) if snippet else 0}")        
         if snippet:
             extracted_ai_snippet = extract_ai_training_snippet(snippet) or ""
