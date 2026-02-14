@@ -167,7 +167,13 @@ def render_markdown(
 
     # RECAP 케이스
     if cl_cases:
-
+        
+        # 🔥 CLDocument를 docket_id 기준으로 매핑
+        doc_map = {}
+        for d in cl_docs:
+            if d.docket_id:
+                doc_map[d.docket_id] = d
+        
         copyright_cases = []
         other_cases = []
 
@@ -189,7 +195,16 @@ def render_markdown(
                 slug = _slugify_case_name(c.case_name)
                 docket_url = f"https://www.courtlistener.com/docket/{c.docket_id}/{slug}/"
                 score = calculate_case_risk_score(c)
+                
+                # 🔥 CLDocument 기반 Complaint 정보 덮어쓰기
+                complaint_doc_no = c.complaint_doc_no
+                complaint_link = c.complaint_link
 
+                if c.docket_id in doc_map:
+                    doc = doc_map[c.docket_id]
+                    complaint_doc_no = doc.doc_number or doc.doc_type
+                    complaint_link = doc.document_url or doc.pdf_url
+                
                 if c.court_short_name and c.court_api_url:
                     court_display = _mdlink(c.court_short_name, c.court_api_url)
                 else:
@@ -206,8 +221,8 @@ def render_markdown(
                     f"{_esc(c.cause)} | "
                     f"{_esc(c.judge)} | "
                     f"{court_display} | "
-                    f"{_esc(c.complaint_doc_no)} | "
-                    f"{_mdlink('PDF', c.complaint_link) if c.complaint_link else ''} | "
+                    f"{_esc(complaint_doc_no)} | "
+                    f"{_mdlink('PDF', complaint_link) if complaint_link else ''} | "
                     f"{_esc(c.recent_updates)} |"
                 )
 
