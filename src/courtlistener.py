@@ -255,7 +255,7 @@ def search_recent_documents(query: str, days: int = 3, max_results: int = 50) ->
         # 사건 기반으로 검색해야 docket_id 확보 가능
         params={
             "q": query,
-            "type": "r",                 # 🔥 문서 기반 검색으로 복귀
+            "type": "r",                 # 🔥  BEST PRACTICE: 문서 기반 검색 유지
             "order_by": "dateFiled desc",   # 🔥 최신순 정렬            
             "page_size": max_results,
             "semantic": "true",          # 🔥 semantic=true 필수
@@ -285,7 +285,17 @@ def search_recent_documents(query: str, days: int = 3, max_results: int = 50) ->
                 print(f"[DEBUG] date parse error: {e}")                
                 pass
         out.append(r)
-    print(f"[DEBUG] search results after date filter={len(out)}")
+
+    # ✅ BEST PRACTICE: 문서 검색 결과에서 docket_id 안정 확보
+    for hit in out:
+        if not hit.get("docket_id"):
+            docket_url = hit.get("docket")
+            if isinstance(docket_url, str):
+                m = re.search(r"/dockets/(\d+)/", docket_url)
+                if m:
+                    hit["docket_id"] = int(m.group(1))
+                    print(f"[DEBUG] injected docket_id={hit['docket_id']} from docket URL")
+
     return out
 
 
@@ -375,6 +385,11 @@ def build_complaint_documents_from_hits(
         docket_number = _safe_str(docket.get("docket_number")) or "미확인"
         court = _safe_str(docket.get("court")) or "미확인"
 
+        print(f"[DEBUG] --- Processing docket {did} ---")
+        print(f"[DEBUG] case_name={case_name}")
+        print(f"[DEBUG] docket_number={docket_number}")
+        print(f"[DEBUG] court={court}")     
+        
         # --------------------------------------------------
         # 안정화: docket 전체 기준 RECAP pagination 조회
         # --------------------------------------------------
@@ -393,12 +408,11 @@ def build_complaint_documents_from_hits(
             url = data.get("next")
     
         print(f"[DEBUG] total RECAP docs fetched={len(docs)}")
-        recap_doc_count = len(docs)
         
         # =====================================================
-        # 🔥 NEW: RECAP API 실패 시 HTML fallback
+        # ✅ BEST PRACTICE: RECAP → HTML fallback
         # =====================================================
-        if not docs:
+        if not docs:        
             if recap_doc_count == 0:            
                 print("[DEBUG] RECAP empty → HTML fallback activated")
                 html_pdf_url = _extract_first_pdf_from_docket_html(did)
@@ -407,6 +421,7 @@ def build_complaint_documents_from_hits(
                 snippet = extract_pdf_text(html_pdf_url, max_chars=3000)
 
                 p_ex, d_ex = extract_parties_from_caption(snippet) if snippet else ("미확인", "미확인")
+                print(f"[DEBUG] HTML fallback snippet length={len(snippet) if snippet else 0}")                
                 causes = detect_causes(snippet) if snippet else []
                 ai_snip = extract_ai_training_snippet(snippet) if snippet else ""
 
@@ -446,6 +461,8 @@ def build_complaint_documents_from_hits(
                     print(f"[DEBUG] complaint date parse error: {e}")                    
                     pass
             print(f"[DEBUG] complaint accepted docket={did} date={date_filed}")
+            print(f"[DEBUG] description={d.get('description')}")
+            print(f"[DEBUG] document_number={d.get('document_number')}")            
             pdf_url = _abs_url(d.get("filepath_local") or "")
             snippet = extract_pdf_text(pdf_url, max_chars=3000) if pdf_url else ""
 
@@ -478,6 +495,9 @@ def build_case_summary_from_docket_id(docket_id: int) -> Optional[CLCaseSummary]
     docket = _get(DOCKET_URL.format(id=docket_id))
     if not docket:
         return None
+    print(f"[DEBUG] === build_case_summary_from_docket_id {docket_id} ===")
+    print(f"[DEBUG] case_name={docket.get('case_name')}")
+    print(f"[DEBUG] docket_number={docket.get('docket_number')}")
 
     case_name = _safe_str(docket.get("case_name")) or "미확인"
     docket_number = _safe_str(docket.get("docket_number")) or "미확인"
@@ -569,14 +589,14 @@ def build_case_summary_from_docket_id(docket_id: int) -> Optional[CLCaseSummary]
     if complaint_doc:
         print("[DEBUG] RECAP complaint document found")
 
-        complaint_doc_no = _safe_str(complaint_doc.get("document_number")) or "1"
-        print(f"[DEBUG] RECAP complaint_link={complaint_link}")        
+        complaint_doc_no = _safe_str(complaint_doc.get("document_number")) or "1"      
         complaint_link = _abs_url(
             complaint_doc.get("filepath_local")
             or complaint_doc.get("absolute_url")
             or ""
         )
-
+        print(f"[DEBUG] complaint_doc_no={complaint_doc_no}")
+        print(f"[DEBUG] complaint_link={complaint_link}")
         complaint_type = _detect_complaint_type(_safe_str(complaint_doc.get("description")))
 
     # 3️⃣ 없으면 HTML fallback
@@ -592,6 +612,8 @@ def build_case_summary_from_docket_id(docket_id: int) -> Optional[CLCaseSummary]
         else:
             print("[DEBUG] HTML fallback failed — no PDF found")
 
+        print(f"[DEBUG] final complaint_link={complaint_link}")
+    
     # 4️⃣ PDF 텍스트 분석
     if complaint_link:
         print(f"[DEBUG] Extracting PDF text from: {complaint_link}")        
