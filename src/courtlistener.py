@@ -142,16 +142,29 @@ def _headers() -> Dict[str, str]:
 
 def _get(url: str, params: Optional[dict] = None) -> Optional[dict]:
     try:
-        print(f"[DEBUG] GET {url} params={params}")        
-        r = requests.get(url, params=params, headers=_headers(), timeout=25)
+        print(f"[DEBUG] GET {url}")
+        print(f"[DEBUG] PARAMS length={len(str(params)) if params else 0}")
+
+        # 🔥 긴 search query는 POST로 처리 (URL 길이 제한 방지)
+        if url.endswith("/search/") and params:
+            r = requests.post(url, json=params, headers=_headers(), timeout=30)
+        else:
+            r = requests.get(url, params=params, headers=_headers(), timeout=30)
+
         if r.status_code in (401, 403):
             print(f"[DEBUG] AUTH ERROR {r.status_code} for {url}")           
             return None
+
+        if r.status_code >= 400:
+            print(f"[DEBUG] HTTP ERROR {r.status_code}")
+            print(f"[DEBUG] RESPONSE TEXT: {r.text[:500]}")
+            return None
+
         r.raise_for_status()
-        print(f"[DEBUG] SUCCESS {url} status={r.status_code}")        
+        print(f"[DEBUG] SUCCESS {url} status={r.status_code}")
         return r.json()
-    except Exception:
-        print(f"[DEBUG] EXCEPTION in _get function.")        
+    except Exception as e:
+        print(f"[DEBUG] EXCEPTION in _get function: {type(e).__name__}: {e}")    
         return None
 
 
