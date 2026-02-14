@@ -292,13 +292,25 @@ def _extract_first_pdf_from_docket_html(docket_id: int) -> str:
 # =====================================================
 
 def search_recent_documents(query: str, days: int = 3, max_results: int = 50) -> List[dict]:
-    print(f"[DEBUG] search_recent_documents query='{query}' days={days}")    
+    print(f"[DEBUG] search_recent_documents query='{query}' days={days}")   
+
+#                          문서단위 검색 vs. 사건단위 검색
+#                         ================================
+# 구분               | r (RECAP documents)        | ca (Cases / Dockets)
+# --------------------------------------------------------------------------------
+# 레벨               | 문서단위                    | 사건단위
+# 단위               | Complaint 1개 (고소장 1개)  | 소송 1건
+# PDF 포함           | V                          | X
+# judge 정보         | X                          | V
+# nature_of_suit     | X                          | V
+# AI 학습 문장 추출   | V                          | 제한적
+# 최근 업데이트       | 일부                       | 전체 사건 기준
+
     data = _get(
         SEARCH_URL,
-        # 🔥 FIX: RECAP 문서 검색(type=r) → 사건 검색(type=ca)
-        # r = recap documents (문서)
+        # RECAP 문서 검색(type=r) → 사건 검색(type=ca)
         # ca = cases (사건)
-        # 사건 기반으로 검색해야 docket_id 확보 가능
+        # r = recap documents (문서)
         params={
             "q": query,
             "type": "r",                 # 🔥  BEST PRACTICE: 문서 기반 검색 유지
