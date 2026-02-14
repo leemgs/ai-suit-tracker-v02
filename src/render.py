@@ -229,6 +229,16 @@ def render_markdown(
                     court_display = _esc(c.court)
 
                 # =====================================================
+                # 🔥 FIX: Complaint PDF 링크 표시 규칙
+                # - 링크 존재 시: 📄 아이콘 출력
+                # - 링크 없으면: "-"
+                # =====================================================
+                if complaint_link:
+                    complaint_link_display = _mdlink("📄", complaint_link)
+                else:
+                    complaint_link_display = "None"
+
+                # =====================================================
                 # 🔥 NEW: RECAP 테이블 로그 출력
                 # =====================================================
                 print("[DEBUG] RECAP row added:")
@@ -254,7 +264,7 @@ def render_markdown(
                     f"{_esc(c.judge)} | "
                     f"{court_display} | "
                     f"{_esc(complaint_doc_no)} | "
-                    f"{_mdlink('📄', complaint_link) if complaint_link else ''} | "
+                    f"{complaint_link_display} | "
                     f"{_esc(c.recent_updates)} |"
                 )
 
