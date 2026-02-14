@@ -235,7 +235,7 @@ def _extract_first_pdf_from_docket_html(docket_id: int) -> str:
 # Search
 # =====================================================
 
-def search_recent_documents(query: str, days: int = 3, max_results: int = 20) -> List[dict]:
+def search_recent_documents(query: str, days: int = 3, max_results: int = 50) -> List[dict]:
     print(f"[DEBUG] search_recent_documents query='{query}' days={days}")    
     data = _get(
         SEARCH_URL,
@@ -246,6 +246,7 @@ def search_recent_documents(query: str, days: int = 3, max_results: int = 20) ->
         params={
             "q": query,
             "type": "r",                 # 🔥 문서 기반 검색으로 복귀
+            "order_by": "dateFiled desc",   # 🔥 최신순 정렬            
             "page_size": max_results,
             "semantic": "true",          # 🔥 semantic=true 필수
         },        
