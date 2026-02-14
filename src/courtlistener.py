@@ -378,7 +378,7 @@ def build_complaint_documents_from_hits(
         # 🔥 NEW: RECAP API 실패 시 HTML fallback
         # =====================================================
         if not docs:
-        if recap_doc_count == 0:            
+            if recap_doc_count == 0:            
             print("[DEBUG] RECAP empty → HTML fallback activated")
             html_pdf_url = _extract_first_pdf_from_docket_html(did)
 
