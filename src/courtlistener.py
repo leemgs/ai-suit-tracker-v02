@@ -477,8 +477,11 @@ def build_complaint_documents_from_hits(
             html_pdf_url = _extract_first_pdf_from_docket_html(did)
 
             if html_pdf_url:
-                print(f"[DEBUG] HTML fallback PDF URL: {html_pdf_url}")                
-                snippet = extract_pdf_text(html_pdf_url, max_chars=3000)
+                print(f"[DEBUG] HTML fallback PDF URL: {html_pdf_url}")
+                # Complaint 구조는 보통 Caption (당사자), Jurisdiction, Background, Factual Allegations, Causes of Action 등으로 구성 되며, 
+                # AI 학습 관련 주장도 보통 초반 5페이지 이내에 등장합니다.
+                # 4500자 의미: 약 2~3페이지 분량 (약 700~900 단어), 'PDF 전체 대신 앞부분 4500자만 분석을하겠다.'는 최적화를 위한 제한 값입니다.
+                snippet = extract_pdf_text(html_pdf_url, max_chars=4500)
 
                 if not snippet:
                     print("[ERROR] PDF parsing FAILED (HTML fallback)")
