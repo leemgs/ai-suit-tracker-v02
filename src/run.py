@@ -7,6 +7,7 @@ from .fetch import fetch_news
 from .extract import load_known_cases, build_lawsuits_from_news
 from .render import render_markdown
 from .github_issue import find_or_create_issue, create_comment, close_other_daily_issues
+from .github_issue import list_comments
 from .slack import post_to_slack
 from .courtlistener import (
     search_recent_documents,
@@ -102,9 +103,71 @@ def main() -> None:
     # KST 기준 타임스탬프
     timestamp = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M KST")
 
-    comment_body = f"\n\n{md}"
-    create_comment(owner, repo, gh_token, issue_no, comment_body)
-    print(f"Issue #{issue_no} 댓글 업로드 완료")
+    comments = list_comments(owner, repo, gh_token, issue_no)
+
+    # 최초 생성 (댓글이 하나도 없는 경우)
+    if not comments:
+        create_comment(owner, repo, gh_token, issue_no, md)
+        print(f"Issue #{issue_no} 최초 전체 리포트 등록 완료")
+    else:
+        import re
+
+        last_comment_body = comments[-1].get("body", "")
+
+        def split_sections(text):
+            sections = {}
+            current = None
+            buffer = []
+            for line in text.splitlines():
+                if line.startswith("## "):
+                    if current:
+                        sections[current] = "\n".join(buffer)
+                    current = line.strip()
+                    buffer = []
+                else:
+                    buffer.append(line)
+            if current:
+                sections[current] = "\n".join(buffer)
+            return sections
+
+        def extract_bullets(section_text):
+            bullets = set()
+            for line in section_text.splitlines():
+                if re.match(r"^- ", line.strip()):
+                    bullets.add(line.strip())
+            return bullets
+
+        sections_now = split_sections(md)
+        sections_prev = split_sections(last_comment_body)
+
+        output_lines = []
+        total_new = 0
+
+        output_lines.append(f"### 실행 시각(KST): {timestamp}")
+        output_lines.append("")
+
+        for title, content_now in sections_now.items():
+            output_lines.append(title)
+
+            bullets_now = extract_bullets(content_now)
+            bullets_prev = extract_bullets(sections_prev.get(title, ""))
+
+            new_items = sorted(bullets_now - bullets_prev)
+
+            if new_items:
+                total_new += len(new_items)
+                output_lines.extend(new_items)
+            else:
+                output_lines.append("- 새롭게 추가된 정보 없음.")
+
+            output_lines.append("")
+
+        if total_new == 0:
+            create_comment(owner, repo, gh_token, issue_no, "새롭게 추가된 정보가 없슴니다.")
+            print("신규 데이터 없음")
+        else:
+            create_comment(owner, repo, gh_token, issue_no, "\n".join(output_lines))
+            print("신규 항목만 업데이트 완료")
 
     # 5) Slack 요약 전송
     summary_lines = [
@@ -129,3 +192,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

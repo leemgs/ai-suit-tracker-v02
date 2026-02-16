@@ -28,6 +28,13 @@ def create_comment(owner: str, repo: str, token: str, issue_number: int, body: s
     r = requests.post(url, headers=_headers(token), json={"body": body}, timeout=20)
     r.raise_for_status()
 
+
+def list_comments(owner: str, repo: str, token: str, issue_number: int) -> list:
+    url = f"https://api.github.com/repos/{owner}/{repo}/issues/{issue_number}/comments"
+    r = requests.get(url, headers=_headers(token), timeout=20)
+    r.raise_for_status()
+    return r.json() or []
+
 def list_open_issues_by_label(owner: str, repo: str, token: str, label: str, per_page: int = 100) -> list[dict]:
     url = f"https://api.github.com/repos/{owner}/{repo}/issues"
     r = requests.get(url, headers=_headers(token), params={"state": "open", "labels": label, "per_page": per_page}, timeout=20)
