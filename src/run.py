@@ -174,13 +174,13 @@ def main() -> None:
             bullets = set()
             for line in section_text.splitlines():
                 stripped = line.strip()
-                if stripped.startswith("- http"):
-                    raw_url = stripped[2:].strip()
+                # 🔹 실제 데이터 항목만 허용 (URL 포함 항목만)
+                if stripped.startswith("- ") and "http" in stripped:
+                    raw_url = stripped.split("http", 1)[1]
+                    raw_url = "http" + raw_url
                     parsed = urlparse(raw_url)
                     normalized = urlunparse((parsed.scheme, parsed.netloc, parsed.path, "", "", ""))
                     bullets.add(f"- {normalized}")
-                elif re.match(r"^- ", stripped):
-                    bullets.add(stripped)
             return bullets
 
         sections_now = split_sections(md)
