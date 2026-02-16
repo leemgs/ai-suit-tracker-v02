@@ -9,6 +9,8 @@ from .render import render_markdown
 from .github_issue import find_or_create_issue, create_comment, close_other_daily_issues
 from .github_issue import list_comments
 from .slack import post_to_slack
+from urllib.parse import urlparse, urlunparse
+import re
 from .courtlistener import (
     search_recent_documents,
     build_complaint_documents_from_hits,
@@ -86,6 +88,46 @@ def main() -> None:
     # 3) 렌더링
     md = render_markdown(lawsuits, cl_docs, cl_cases, lookback_days=lookback_days)
     md = f"### 실행 시각(KST): {run_ts_kst}\n\n" + md
+   
+
+    # ==========================================
+    # 🔹 노이즈 제거 + URL Canonicalization
+    # ==========================================
+
+    def normalize_url(url: str) -> str:
+        try:
+            parsed = urlparse(url)
+            return urlunparse((parsed.scheme, parsed.netloc, parsed.path, "", "", ""))
+        except Exception:
+            return url
+
+    cleaned_lines = []
+    seen_urls = set()
+
+    for line in md.splitlines():
+        stripped = line.strip()
+
+        # Google RSS 제거
+        if "news.google.com/rss" in stripped:
+            continue
+        # bullet URL 처리
+        if stripped.startswith("- http"):
+            raw_url = stripped[2:].strip()
+            normalized = normalize_url(raw_url)
+
+            # CourtListener 외 URL 제거 (RECAP 보호)
+            if "courtlistener.com" not in normalized:
+                continue
+
+            if normalized in seen_urls:
+                continue
+
+            seen_urls.add(normalized)
+            cleaned_lines.append(f"- {normalized}")
+        else:
+            cleaned_lines.append(line)
+
+    md = "\n".join(cleaned_lines)   
     
     print("===== REPORT BEGIN =====")
     print(md[:1000]) # 로그 너무 길면 잘리므로 일부만 출력
@@ -110,8 +152,6 @@ def main() -> None:
         create_comment(owner, repo, gh_token, issue_no, md)
         print(f"Issue #{issue_no} 최초 전체 리포트 등록 완료")
     else:
-        import re
-
         last_comment_body = comments[-1].get("body", "")
 
         def split_sections(text):
@@ -133,8 +173,14 @@ def main() -> None:
         def extract_bullets(section_text):
             bullets = set()
             for line in section_text.splitlines():
-                if re.match(r"^- ", line.strip()):
-                    bullets.add(line.strip())
+                stripped = line.strip()
+                if stripped.startswith("- http"):
+                    raw_url = stripped[2:].strip()
+                    parsed = urlparse(raw_url)
+                    normalized = urlunparse((parsed.scheme, parsed.netloc, parsed.path, "", "", ""))
+                    bullets.add(f"- {normalized}")
+                elif re.match(r"^- ", stripped):
+                    bullets.add(stripped)
             return bullets
 
         sections_now = split_sections(md)
