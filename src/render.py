@@ -191,13 +191,13 @@ def render_markdown(
                 doc_map[d.docket_id] = d
         
         lines.append("## ⚖️ RECAP\n")
-            lines.append(
-                "| No. | 상태 | 케이스명 | 도켓번호 | Nature | 위험도 | "
-                "소송이유 | AI학습관련 핵심주장 | 법적 근거 | 담당판사 | 법원 | "
-                "Complaint 문서 번호 | Complaint PDF 링크 | 최근 도켓 업데이트⬇️ |"
-            )
-            lines.append(_md_sep(14))
-
+        lines.append(
+            "| No. | 상태 | 케이스명 | 도켓번호 | Nature | 위험도 | "
+            "소송이유 | AI학습관련 핵심주장 | 법적 근거 | 담당판사 | 법원 | "
+            "Complaint 문서 번호 | Complaint PDF 링크 | 최근 도켓 업데이트⬇️ |"
+        )
+        lines.append(_md_sep(14))
+        
         # 최근 업데이트 기준 내림차순 정렬
         sorted_cases = sorted(
             cl_cases,
