@@ -17,6 +17,7 @@ from .courtlistener import (
     build_documents_from_docket_ids,
 )
 from .queries import COURTLISTENER_QUERIES
+from .github_issue import get_issue_body
 
 def main() -> None:
     # 0) 환경 변수 로드
@@ -110,6 +111,27 @@ def main() -> None:
     # 4) GitHub Issue 작업
     issue_no = find_or_create_issue(owner, repo, gh_token, issue_title, issue_label)
     issue_url = f"https://github.com/{owner}/{repo}/issues/{issue_no}"
+
+    # =====================================================
+    # 🔥 BASE SNAPSHOT 비교
+    # =====================================================
+    base_body = get_issue_body(owner, repo, gh_token, issue_no)
+
+    is_first_run = False
+    if "자동 수집 리포트가 댓글로 누적됩니다." in base_body:
+        # 최초 실행 → base snapshot 생성
+        is_first_run = True
+        from .github_issue import update_issue_body
+        update_issue_body(owner, repo, gh_token, issue_no, md)
+    else:
+        # 후속 실행 → base snapshot 기준 중복 제거
+        from .render import filter_duplicates_and_make_summary
+        md, summary_text = filter_duplicates_and_make_summary(
+            md,
+            base_body,
+        )
+
+        md = summary_text + "\n\n" + md
     
     # 이전 날짜 이슈 Close
     closed_nums = close_other_daily_issues(owner, repo, gh_token, issue_label, base_title, issue_title, issue_no, issue_url)

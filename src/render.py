@@ -4,7 +4,66 @@ from collections import Counter
 import re
 from .extract import Lawsuit
 from .courtlistener import CLDocument, CLCaseSummary
+import re
 
+###########################################################
+# 🔥 Base Snapshot 기준 중복 제거 로직
+###########################################################
+
+def _extract_table_rows(md: str, section_title: str) -> list[str]:
+    pattern = rf"## {re.escape(section_title)}.*?\n(.*?)(?:\n## |\Z)"
+    m = re.search(pattern, md, re.S)
+    if not m:
+        return []
+    block = m.group(1)
+    rows = []
+    for line in block.split("\n"):
+        if line.startswith("|") and not line.startswith("|---"):
+            rows.append(line.strip())
+    return rows
+
+
+def filter_duplicates_and_make_summary(current_md: str, base_md: str):
+
+    news_rows_base = _extract_table_rows(base_md, "📰 외부 기사 기반 소송 정보")
+    recap_rows_base = _extract_table_rows(base_md, "⚖️ RECAP")
+
+    news_rows_current = _extract_table_rows(current_md, "📰 외부 기사 기반 소송 정보")
+    recap_rows_current = _extract_table_rows(current_md, "⚖️ RECAP")
+
+    base_news_count = len(news_rows_base)
+    base_recap_count = len(recap_rows_base)
+
+    new_news = 0
+    new_recap = 0
+
+    for r in news_rows_current:
+        if r not in news_rows_base:
+            new_news += 1
+
+    for r in recap_rows_current:
+        if r not in recap_rows_base:
+            new_recap += 1
+
+    def replace_rows(md, base_rows):
+        lines = md.split("\n")
+        new_lines = []
+        for line in lines:
+            if line.strip() in base_rows:
+                new_lines.append("| skip | skip | skip | skip | skip | skip |")
+            else:
+                new_lines.append(line)
+        return "\n".join(new_lines)
+
+    updated_md = replace_rows(current_md, news_rows_base + recap_rows_base)
+
+    summary_text = (
+        "### 자료 중복 제거 결과 요약:\n"
+        f"1). 📰 외부 기사 기반 소송 정보: 기존 {base_news_count}건 (base snapshot) + 신규 {new_news}건 = 총 {base_news_count + new_news}건\n"
+        f"2). ⚖️ RECAP: 기존 {base_recap_count}건 (base snapshot) + 신규 {new_recap}건 = 총 {base_recap_count + new_recap}건"
+    )
+
+    return updated_md, summary_text
 
 def _esc(s: str) -> str:
     s = str(s or "").strip()
