@@ -117,13 +117,10 @@ def render_markdown(
 
     lines: List[str] = []
 
-    # KPI
-    lines.append(f"## 📊 최근 {lookback_days}일 요약\n")
-    lines.append("| 구분 | 건수 |")
-    lines.append("|---|---|")
-    lines.append(f"| 📰 외부기사 수집건 | **{len(lawsuits)}** |")
-    lines.append(f"| ⚖️ RECAP  소송제기 | **{len(cl_cases)}** |")
-    lines.append(f"| ⚖️ RECAP  법원문서 | **{recap_doc_count}** |\n")
+    # KPI (간결 텍스트 요약)
+    lines.append(f"## 📊 최근 {lookback_days}일 요약")
+    lines.append(f"└ 📰 News: {len(lawsuits)}")
+    lines.append(f"└ ⚖ Cases: {len(cl_cases)} (Docs: {recap_doc_count})\n")
 
     # Nature 통계
     if cl_cases:
