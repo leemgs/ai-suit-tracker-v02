@@ -300,49 +300,98 @@ def main() -> None:
     print(f"Issue #{issue_no} 댓글 업로드 완료")
 
     # 5) Slack 요약 전송
-
     # ============================================
-    # 🔥 Slack에 Base Snapshot 요약 추가
+    # 🔥 Slack 출력 개선 (최종 포맷)
     # ============================================
 
-    slack_dedup_summary = ""
+    import re
+
+    base_news = new_news = total_news = None
+    base_cases = new_cases = total_cases = None
 
     if "### 자료 중복 제거 결과 요약:" in md:
-        import re
 
-        m = re.search(
-            r"### 자료 중복 제거 결과 요약:\n(.*?)\n\n",
+        m_news = re.search(
+            r"외부 기사 기반 소송 정보: 기존 (\d+)건 .*?\+ 신규 (-?\d+)건 = 총 (\d+)건",
             md,
-            flags=re.S,
         )
 
-        if m:
-            slack_dedup_summary = m.group(1).strip()
- 
-    summary_lines = [
-        f"*AI 소송 모니터링 업데이트* ({timestamp})",
-    ]
+        m_cases = re.search(
+            r"RECAP: 기존 (\d+)건 .*?\+ 신규 (-?\d+)건 = 총 (\d+)건",
+            md,
+        )
 
-    # Slack 첫 줄에 중복 제거 요약 추가
-    if slack_dedup_summary:
-        summary_lines.append(slack_dedup_summary)
-    summary_lines += [
-        f"- 언론보도 기반 수집 건수: {len(lawsuits)}건",
-        f"- 법원 사건(RECAP 도켓) 확인 건수: {docket_case_count}건",
-        f"- 법원 문서(RECAP Complaint 등) 확보 건수: {recap_doc_count}건",
-        f"- GitHub Issue (For more details): <{issue_url}|#{issue_no}>",
-    ]
-    
+        if m_news:
+            base_news = int(m_news.group(1))
+            new_news = int(m_news.group(2))
+            total_news = int(m_news.group(3))
+
+        if m_cases:
+            base_cases = int(m_cases.group(1))
+            new_cases = int(m_cases.group(2))
+            total_cases = int(m_cases.group(3))
+
+    def format_delta(n: int) -> str:
+        if n > 0:
+            return f"+{n}"
+        elif n < 0:
+            return f"{n}"
+        else:
+            return "0"
+
+    slack_lines = []
+
+    slack_lines.append("📊 AI 소송 모니터링")
+    slack_lines.append(f"🕒 {timestamp}")
+    slack_lines.append("")
+
+    # 🔁 Dedup Summary
+    if base_news is not None and base_cases is not None:
+        slack_lines.append("🔁 Dedup Summary")
+        slack_lines.append(
+            f"└ News: {base_news} → {format_delta(new_news)} = {total_news}"
+        )
+        slack_lines.append(
+            f"└ Cases: {base_cases} → {format_delta(new_cases)} = {total_cases}"
+        )
+        slack_lines.append("")
+
+    # 📈 Collection Status
+    slack_lines.append("📈 Collection Status")
+    slack_lines.append(f"└ News: {len(lawsuits)}")
+    slack_lines.append(
+        f"└ Cases: {docket_case_count} (Docs: {recap_doc_count})"
+    )
+    slack_lines.append("")
+
+    # 🔗 GitHub
+    slack_lines.append(f"🔗 GitHub: <{issue_url}|#{issue_no}>")
+
+    # 🆕 최신 RECAP 문서
     if cl_docs:
-        # date_filed 기준으로 정렬
-        top = sorted(cl_docs, key=lambda x: getattr(x, 'date_filed', ''), reverse=True)[:3]
-        summary_lines.append("- 최신 RECAP 문서:")
+        top = sorted(
+            cl_docs,
+            key=lambda x: getattr(x, "date_filed", ""),
+            reverse=True,
+        )[:3]
+
+        slack_lines.append("")
+        slack_lines.append("🆕 최신 RECAP 문서")
+
         for d in top:
-            date = getattr(d, 'date_filed', 'N/A')
-            name = getattr(d, 'case_name', 'Unknown Case')
-            summary_lines.append(f"  • {date} | {name}")
-    
-    post_to_slack(slack_webhook, "\n".join(summary_lines))
+            date = getattr(d, "date_filed", "N/A")
+            name = getattr(d, "case_name", "Unknown Case")
+            docket_id = getattr(d, "docket_id", None)
+
+            if docket_id:
+                docket_url = f"https://www.courtlistener.com/docket/{docket_id}/"
+                slack_lines.append(
+                    f"• {date} | <{docket_url}|{name}>"
+                )
+            else:
+                slack_lines.append(f"• {date} | {name}")
+
+    post_to_slack(slack_webhook, "\n".join(slack_lines))
     print("Slack 전송 완료")
 
 if __name__ == "__main__":
