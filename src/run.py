@@ -388,10 +388,29 @@ def main() -> None:
         for d in top:
             date = getattr(d, "date_filed", "N/A")
             name = getattr(d, "case_name", "Unknown Case")
-            docket_id = getattr(d, "docket_id", None)
+            absolute_url = getattr(d, "absolute_url", None)
 
-            if docket_id:
-                docket_url = f"https://www.courtlistener.com/docket/{docket_id}/"
+            if absolute_url:
+                # 🔥 가장 정확한 URL (slug 포함)
+                docket_url = absolute_url
+                if not docket_url.endswith("/"):
+                    docket_url += "/"
+
+                slack_lines.append(
+                    f"• {date} | <{docket_url}|{name}>"
+                )
+            elif docket_id:
+                # 🔥 slug 생성 (GitHub 이슈와 동일 구조 맞추기)
+                import re
+
+                # case_name → slug 변환
+                slug = re.sub(r"[^a-zA-Z0-9]+", "-", name).strip("-").lower()
+
+                docket_url = (
+                    f"https://www.courtlistener.com/docket/"
+                    f"{docket_id}/{slug}/"
+                )
+
                 slack_lines.append(
                     f"• {date} | <{docket_url}|{name}>"
                 )
