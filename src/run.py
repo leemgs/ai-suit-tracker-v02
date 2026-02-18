@@ -277,15 +277,22 @@ def main() -> None:
         # -------------------------
         # Summary 생성
         # -------------------------
+        def format_delta(n: int) -> str:
+            if n > 0:
+                return f"🔺+{n}"
+            elif n < 0:
+                return f"🔻{n}"
+            else:
+                return "➖0"
+
         summary_header = (
-            "### 자료 중복 제거 결과 요약:\n"
-            f"1). 외부 기사 기반 소송 정보: 기존 {len(base_article_set)}건 (base snapshot) "
-            f"+ 신규 {new_article_count}건 = 총 {total_article_count}건\n"
-            f"2). RECAP: 기존 {len(base_docket_set)}건 (base snapshot) "
-            f"+ 신규 {new_docket_count}건 = 총 {total_docket_count}건\n\n"
+            "### 중복 제거 요약:\n"
+            "🔁 Dedup Summary\n"
+            f"└ 📰 {len(base_article_set)} (base snapshot) → {format_delta(new_article_count)} = {total_article_count}\n"
+            f"└ ⚖ {len(base_docket_set)} (base snapshot) → {format_delta(new_docket_count)} = {total_docket_count}\n\n"
         )
 
-        md = summary_header + current_md 
+        md = summary_header + current_md
 
     # 이전 날짜 이슈 Close
     closed_nums = close_other_daily_issues(owner, repo, gh_token, issue_label, base_title, issue_title, issue_no, issue_url)
