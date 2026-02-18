@@ -375,6 +375,7 @@ def main() -> None:
         for d in top:
             date = getattr(d, "date_filed", "N/A")
             name = getattr(d, "case_name", "Unknown Case")
+            docket_id = getattr(d, "docket_id", None) 
             absolute_url = getattr(d, "absolute_url", None)
 
             if absolute_url:
@@ -403,9 +404,11 @@ def main() -> None:
                 )
             else:
                 slack_lines.append(f"• {date} | {name}")
-
-    post_to_slack(slack_webhook, "\n".join(slack_lines))
-    print("Slack 전송 완료")
-
+    try:
+        post_to_slack(slack_webhook, "\n".join(slack_lines))
+        print("Slack 전송 완료")
+    except Exception as e:
+        print("Slack 전송 실패:", str(e))
+        
 if __name__ == "__main__":
     main()
