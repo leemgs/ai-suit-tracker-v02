@@ -47,4 +47,4 @@ jobs:
           # 디버그 모드(0/1). Actions -> Variables에 DEBUG=1 설정 시 활성화
           DEBUG: ${{ vars.DEBUG }}
         run: |
-          python -m src.run | tee run_output.log
+          python -m src.run
