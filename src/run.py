@@ -90,7 +90,7 @@ def main() -> None:
     docket_case_count = len(cl_cases)
     
     # =====================================================
-    # 🔥 FIX: RECAP 문서 건수 계산 방식 수정
+    # FIX: RECAP 문서 건수 계산 방식 수정
     # 기존: len(cl_docs)
     # 문제: HTML fallback 등으로 CLCaseSummary에만 complaint_link가 있고
     #       CLDocument가 생성되지 않는 경우 KPI가 0으로 나옴
@@ -109,8 +109,8 @@ def main() -> None:
     md = f"### 실행 시각(KST): {run_ts_kst}\n\n" + md
     
     debug_log(f"📊 수집 및 분석 완료 (최근 {lookback_days}일)")
-    debug_log(f"  ├ 📰 외부 소송 기사: {len(lawsuits)}건")
-    debug_log(f"  └ ⚖ CourtListener(RECAP): {docket_case_count}건 (문서 {recap_doc_count}건)")
+    debug_log(f"  ├ News: {len(lawsuits)}건")
+    debug_log(f"  └ Cases (CourtListener+RECAP): {docket_case_count}건 (문서 {recap_doc_count}건)")
 
     debug_log("===== REPORT PREVIEW (First 1000 chars) =====")
     debug_log(md[:1000])
@@ -122,7 +122,7 @@ def main() -> None:
    
 
     # =========================================================
-    # 🔥 Base Snapshot 비교 로직
+    # Base Snapshot 비교 로직
     # =========================================================
     comments = list_comments(owner, repo, gh_token, issue_no)
     first_run_today = len(comments) == 0
@@ -230,7 +230,7 @@ def main() -> None:
             for r in rows:
                 url = extract_article_url(r[title_idx])
                 if url in base_article_set:
-                    # 🔥 개선: 핵심 식별 컬럼(No, 기사일자, 제목)은 유지
+                    # 개선: 핵심 식별 컬럼(No, 기사일자, 제목)은 유지
                     new_row = []
                     for i, col in enumerate(r):
                         if i in (no_idx, date_idx, title_idx):
@@ -275,7 +275,7 @@ def main() -> None:
             for r in rows:
                 docket = r[docket_idx]
                 if docket in base_docket_set:
-                    # 🔥 개선: 핵심 식별 컬럼(No, 상태, 케이스명, 도켓번호) 유지
+                    # 개선: 핵심 식별 컬럼(No, 상태, 케이스명, 도켓번호) 유지
                     new_row = []
                     for i, col in enumerate(r):
                         if i in (no_idx, status_idx, case_idx, docket_idx):
@@ -311,10 +311,10 @@ def main() -> None:
         summary_header = (
             "### 중복 제거 요약:\n"
             "🔁 Dedup Summary\n"
-            f"└ 📰 {base_news} (Base snapshot), "
+            f"└ News {base_news} (Base snapshot): "
             f"{dup_news} (Dup), "
             f"{new_article_count} (New)\n"
-            f"└ ⚖ {base_cases} (Base snapshot), "
+            f"└ Cases {base_cases} (Base snapshot): "
             f"{dup_cases} (Dup), "
             f"{new_docket_count} (New)\n\n"
         )
@@ -335,7 +335,7 @@ def main() -> None:
 
     # 5) Slack 요약 전송
     # ============================================
-    # 🔥 Slack 출력 개선 (최종 포맷)
+    # Slack 출력 개선 (최종 포맷)
     # ============================================
 
     slack_dedup_news = None
@@ -343,12 +343,12 @@ def main() -> None:
 
     if "### 중복 제거 요약:" in md:
         m_news = re.search(
-            r"└ 📰 (.+)",
+            r"└ News (.+)",
             md,
         )
 
         m_cases = re.search(
-            r"└ ⚖ (.+)",
+            r"└ Cases (.+)",
             md,
         )
 
@@ -369,8 +369,8 @@ def main() -> None:
     # 🔁 Dedup Summary
     if slack_dedup_news and slack_dedup_cases:
         slack_lines.append("🔁 Dedup Summary")
-        slack_lines.append(f"└ 📰 {slack_dedup_news}")
-        slack_lines.append(f"└ ⚖ {slack_dedup_cases}")
+        slack_lines.append(f"└ News {slack_dedup_news}")
+        slack_lines.append(f"└ Cases {slack_dedup_cases}")
         slack_lines.append("")
 
     # 📈 Collection Status
@@ -402,7 +402,7 @@ def main() -> None:
             absolute_url = getattr(d, "absolute_url", None)
 
             if absolute_url:
-                # 🔥 가장 정확한 URL (slug 포함)
+                # 가장 정확한 URL (slug 포함)
                 docket_url = absolute_url
                 if not docket_url.endswith("/"):
                     docket_url += "/"
@@ -411,7 +411,7 @@ def main() -> None:
                     f"• {date} | <{docket_url}|{name}>"
                 )
             elif docket_id:
-                # 🔥 slug 생성 (GitHub 이슈와 동일 구조 맞추기)
+                # slug 생성 (GitHub 이슈와 동일 구조 맞추기)
                 # case_name → slug 변환
                 slug = re.sub(r"[^a-zA-Z0-9]+", "-", name).strip("-").lower()
 
@@ -427,7 +427,7 @@ def main() -> None:
                 slack_lines.append(f"• {date} | {name}")
     try:
         post_to_slack(slack_webhook, "\n".join(slack_lines))
-        debug_log("Slack 전송 완료")
+        debug_log(f"Slack 전송 완료")
     except Exception as e:
         debug_log(f"Slack 전송 실패: {e}")
         
