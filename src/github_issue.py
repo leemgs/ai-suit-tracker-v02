@@ -83,11 +83,5 @@ def list_comments(owner: str, repo: str, token: str, issue_number: int) -> list[
     return r.json() or []
 
 
-def get_first_comment_body(owner: str, repo: str, token: str, issue_number: int) -> str | None:
-    comments = list_comments(owner, repo, token, issue_number)
-    if not comments:
-        return None
 
-    # GitHub API는 오래된 순 정렬
-    return comments[0].get("body")
 

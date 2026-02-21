@@ -8,7 +8,7 @@ from .fetch import fetch_news
 from .extract import load_known_cases, build_lawsuits_from_news
 from .render import render_markdown
 from .github_issue import find_or_create_issue, create_comment, close_other_daily_issues
-from .github_issue import list_comments, get_first_comment_body
+from .github_issue import list_comments
 from .slack import post_to_slack
 from .utils import debug_log
 from .courtlistener import (
@@ -128,11 +128,8 @@ def main() -> None:
     first_run_today = len(comments) == 0
 
     if not first_run_today:
-        base_body = get_first_comment_body(owner, repo, gh_token, issue_no) or ""
-
-
         # =====================================================
-        # 🔒 안정형 테이블 기반 비교 로직
+        # 🔒 안정형 테이블 기반 비교 로직 (모든 이전 댓글 대상)
         # =====================================================
 
         def extract_section(md_text: str, section_title: str) -> str:
@@ -184,26 +181,31 @@ def main() -> None:
             return None
 
         # -------------------------
-        # Base Snapshot Key Set 생성
+        # Base Snapshot Key Set 생성 (모든 이전 댓글 대상)
         # -------------------------
         base_article_set = set()
         base_docket_set = set()
 
-        news_section_base = extract_section(base_body, "## 📰 News")
-        headers, rows, _ = parse_table(news_section_base)
-        if "제목" in headers:
-            idx = headers.index("제목")
-            for r in rows:
-                url = extract_article_url(r[idx])
-                if url:
-                    base_article_set.add(url)
-
-        recap_section_base = extract_section(base_body, "## ⚖️ Cases")
-        headers, rows, _ = parse_table(recap_section_base)
-        if "도켓번호" in headers:
-            idx = headers.index("도켓번호")
-            for r in rows:
-                base_docket_set.add(r[idx])
+        for comment in comments:
+            body = comment.get("body") or ""
+            
+            # News 처리
+            news_section_base = extract_section(body, "## 📰 News")
+            h_news, r_news, _ = parse_table(news_section_base)
+            if "제목" in h_news:
+                idx = h_news.index("제목")
+                for r in r_news:
+                    url = extract_article_url(r[idx])
+                    if url:
+                        base_article_set.add(url)
+            
+            # Cases 처리
+            recap_section_base = extract_section(body, "## ⚖️ Cases")
+            h_cases, r_cases, _ = parse_table(recap_section_base)
+            if "도켓번호" in h_cases:
+                idx = h_cases.index("도켓번호")
+                for r in r_cases:
+                    base_docket_set.add(r[idx])
 
         # -------------------------
         # 현재 md 처리
