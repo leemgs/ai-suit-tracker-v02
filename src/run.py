@@ -165,10 +165,21 @@ def main() -> None:
         )
 
         if m_news:
-            slack_dedup_news = m_news.group(1).strip()
+            line = m_news.group(1).strip()
+            # New 수치가 0보다 크면 강조 (Bolding + 🔴)
+            slack_dedup_news = re.sub(
+                r"(\d+)\s+\(New\)",
+                lambda m: f"*{m.group(1)} (New)*" + (" 🔴" if int(m.group(1)) > 0 else ""),
+                line
+            )
 
         if m_cases:
-            slack_dedup_cases = m_cases.group(1).strip()
+            line = m_cases.group(1).strip()
+            slack_dedup_cases = re.sub(
+                r"(\d+)\s+\(New\)",
+                lambda m: f"*{m.group(1)} (New)*" + (" 🔴" if int(m.group(1)) > 0 else ""),
+                line
+            )
 
 
 
