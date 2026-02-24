@@ -110,13 +110,16 @@ def apply_deduplication(md: str, comments: List[dict]) -> str:
                 new_article_count += 1
         
         final_rows = non_skip_rows
-        new_lines = [header_line, separator_line]
-        for row_idx, r in enumerate(final_rows, start=1):
-            if no_idx is not None:
-                r[no_idx] = str(row_idx)
-            new_lines.append("| " + " | ".join(r) + " |")
+        if not final_rows:
+            new_news_section = "새로운 소식이 0건입니다.\n"
+        else:
+            new_lines = [header_line, separator_line]
+            for row_idx, r in enumerate(final_rows, start=1):
+                if no_idx is not None:
+                    r[no_idx] = str(row_idx)
+                new_lines.append("| " + " | ".join(r) + " |")
+            new_news_section = "\n".join(new_lines)
 
-        new_news_section = "\n".join(new_lines)
         current_md = current_md.replace(news_section, new_news_section)
 
     # 3) 현재 Markdown 처리 (Cases)
@@ -144,13 +147,16 @@ def apply_deduplication(md: str, comments: List[dict]) -> str:
                 new_docket_count += 1
 
         final_rows = non_skip_rows
-        new_lines = [header_line, separator_line]
-        for row_idx, r in enumerate(final_rows, start=1):
-            if no_idx is not None:
-                r[no_idx] = str(row_idx)
-            new_lines.append("| " + " | ".join(r) + " |")
+        if not final_rows:
+            new_recap_section = "새로운 소식이 0건입니다.\n"
+        else:
+            new_lines = [header_line, separator_line]
+            for row_idx, r in enumerate(final_rows, start=1):
+                if no_idx is not None:
+                    r[no_idx] = str(row_idx)
+                new_lines.append("| " + " | ".join(r) + " |")
+            new_recap_section = "\n".join(new_lines)
 
-        new_recap_section = "\n".join(new_lines)
         current_md = current_md.replace(recap_section, new_recap_section)
 
     # 4) 중복 제거 요약 생성
