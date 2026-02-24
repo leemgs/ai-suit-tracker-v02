@@ -109,14 +109,16 @@ def apply_deduplication(md: str, comments: List[dict]) -> str:
                 non_skip_rows.append(r)
                 new_article_count += 1
         
-        final_rows = non_skip_rows
-        new_lines = [header_line, separator_line]
-        for row_idx, r in enumerate(final_rows, start=1):
-            if no_idx is not None:
-                r[no_idx] = str(row_idx)
-            new_lines.append("| " + " | ".join(r) + " |")
-
-        new_news_section = "\n".join(new_lines)
+        if new_article_count == 0:
+            new_news_section = "새로운 소식이 0건입니다.\n"
+        else:
+            final_rows = non_skip_rows
+            new_lines = [header_line, separator_line]
+            for row_idx, r in enumerate(final_rows, start=1):
+                if no_idx is not None:
+                    r[no_idx] = str(row_idx)
+                new_lines.append("| " + " | ".join(r) + " |")
+            new_news_section = "\n".join(new_lines)
         current_md = current_md.replace(news_section, new_news_section)
 
     # 3) 현재 Markdown 처리 (Cases)
@@ -126,7 +128,7 @@ def apply_deduplication(md: str, comments: List[dict]) -> str:
     new_docket_count = 0
     total_docket_count = len(c_rows)
 
-    if n_headers and "도켓번호" in c_headers:
+    if c_headers and "도켓번호" in c_headers:
         docket_idx = c_headers.index("도켓번호")
         no_idx = c_headers.index("No.") if "No." in c_headers else None
         status_idx = c_headers.index("상태") if "상태" in c_headers else None
@@ -143,14 +145,16 @@ def apply_deduplication(md: str, comments: List[dict]) -> str:
                 non_skip_rows.append(r)
                 new_docket_count += 1
 
-        final_rows = non_skip_rows
-        new_lines = [header_line, separator_line]
-        for row_idx, r in enumerate(final_rows, start=1):
-            if no_idx is not None:
-                r[no_idx] = str(row_idx)
-            new_lines.append("| " + " | ".join(r) + " |")
-
-        new_recap_section = "\n".join(new_lines)
+        if new_docket_count == 0:
+            new_recap_section = "새로운 소식이 0건입니다.\n"
+        else:
+            final_rows = non_skip_rows
+            new_lines = [header_line, separator_line]
+            for row_idx, r in enumerate(final_rows, start=1):
+                if no_idx is not None:
+                    r[no_idx] = str(row_idx)
+                new_lines.append("| " + " | ".join(r) + " |")
+            new_recap_section = "\n".join(new_lines)
         current_md = current_md.replace(recap_section, new_recap_section)
 
     # 4) 중복 제거 요약 생성
