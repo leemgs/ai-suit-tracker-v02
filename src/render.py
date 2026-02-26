@@ -49,33 +49,33 @@ def _slugify_case_name(name: str) -> str:
 
 
 # =====================================================
+# 위험도 기준 정의
+# =====================================================
+RISK_CRITERIA = [
+    ("무단 데이터 수집 명시", ["scrape", "crawl", "ingest", "harvest", "mining", "extraction", "bulk", "collection", "robots.txt", "common crawl", "laion", "the pile", "bookcorpus", "unauthorized"], 30),
+    ("모델 학습 직접 언급", ["train", "training", "model", "llm", "generative ai", "genai", "gpt", "transformer", "weight", "fine-tune", "diffusion", "inference"], 30),
+    ("상업적 사용", ["commercial", "profit", "monetiz", "revenue", "subscription", "enterprise", "paid", "for-profit"], 15),
+    ("저작권 관련/쟁점", ["copyright", "infringement", "dmca", "fair use", "derivative", "exclusive", "820"], 15),
+    ("집단소송", ["class action", "putative class", "representative"], 10),
+]
+
+
+# =====================================================
 # 뉴스 위험도
 # =====================================================
-def calculate_news_risk_score(title: str, reason: str) -> int:
+def calculate_news_risk_score(title: str, reason: str) -> tuple[int, List[str]]:
     score = 0
+    matched_keywords = []
     text = f"{title or ''} {reason or ''}".lower()
 
-    # 1. 무단 데이터 수집 명시 (+30)
-    if any(k in text for k in ["scrape", "crawl", "ingest", "harvest", "mining", "extraction", "bulk", "collection", "robots.txt", "common crawl", "laion", "the pile", "bookcorpus", "unauthorized"]):
-        score += 30
-    
-    # 2. 모델 학습 직접 언급 (+30)
-    if any(k in text for k in ["train", "training", "model", "llm", "generative ai", "genai", "gpt", "transformer", "weight", "fine-tune", "diffusion", "inference"]):
-        score += 30
-    
-    # 3. 상업적 사용 (+15)
-    if any(k in text for k in ["commercial", "profit", "monetiz", "revenue", "subscription", "enterprise", "paid", "for-profit"]):
-        score += 15
-    
-    # 4. 저작권 관련 (뉴스에서는 Nature of Suit 820 대용으로 키워드 체크) (+15)
-    if any(k in text for k in ["copyright", "infringement", "dmca", "fair use", "derivative", "exclusive", "820"]):
-        score += 15
-        
-    # 5. 집단소송 (+10)
-    if any(k in text for k in ["class action", "putative class", "representative"]):
-        score += 10
+    for name, keywords, points in RISK_CRITERIA:
+        found = [k for k in keywords if k in text]
+        if found:
+            score += points
+            # 각 카테고리에서 발견된 첫 2개 키워드만 표시 (너무 길어짐 방지)
+            matched_keywords.append(f"{name}: {', '.join(found[:2])}")
 
-    return min(score, 100)
+    return min(score, 100), matched_keywords
 
 
 def format_risk(score: int) -> str:
@@ -184,26 +184,29 @@ def render_markdown(
     lines.append("## 📰 News")
     if lawsuits:
         debug_log("'News' is printed.")            
-        lines.append("| No. | 기사일자⬇️ | 제목 | 소송번호 | 소송사유 | 위험도 예측 점수 |")
-        lines.append(_md_sep(6))
+        lines.append("| No. | 기사일자⬇️ | 제목 | 소송번호 | 조건 (주요 키워드) | 소송사유 | 위험도 예측 점수 |")
+        lines.append(_md_sep(7))
 
         # 기사일자 기준으로 정렬 (날짜 내림차순, 동일 날짜 시 위험도 내림차순)
         scored_lawsuits = []
         for s in lawsuits:
-            risk_score = calculate_news_risk_score(s.article_title or s.case_title, s.reason)
-            scored_lawsuits.append((risk_score, s))
+            risk_score, keywords = calculate_news_risk_score(s.article_title or s.case_title, s.reason)
+            scored_lawsuits.append((risk_score, keywords, s))
         
-        scored_lawsuits.sort(key=lambda x: (x[1].update_or_filed_date or "", x[0]), reverse=True)
+        scored_lawsuits.sort(key=lambda x: (x[2].update_or_filed_date or "", x[0]), reverse=True)
 
-        for idx, (risk_score, s) in enumerate(scored_lawsuits, start=1):
+        for idx, (risk_score, keywords, s) in enumerate(scored_lawsuits, start=1):
             article_url = s.article_urls[0] if getattr(s, "article_urls", None) else ""
             title_cell = _mdlink(s.article_title or s.case_title, article_url)
+
+            keyword_display = "<br>".join(keywords) if keywords else "-"
 
             lines.append(
                 f"| {idx} | "
                 f"{_esc(s.update_or_filed_date)} | "
                 f"{title_cell} | "
                 f"{_esc(s.case_number)} | "
+                f"{_esc(keyword_display)} | "
                 f"{_short(s.reason)} | "
                 f"{format_risk(risk_score)} |"
             )
@@ -359,11 +362,9 @@ def render_markdown(
     lines.append("### 🧮 점수 산정 기준")
     lines.append("| 항목 | 조건 (주요 키워드) | 점수 |")
     lines.append("|---|---|---|")
-    lines.append("| 무단 데이터 수집 명시 | scrape, crawl, ingest, unauthorized 등 | +30 |")
-    lines.append("| 모델 학습 직접 언급 | train, model, llm, generative ai, gpt 등 | +30 |")
-    lines.append("| 상업적 사용 | commercial, profit, monetiz, revenue 등 | +15 |")
-    lines.append("| 저작권 소송/쟁점 | Nature=820, copyright, infringement, dmca 등 | +15 |")
-    lines.append("| 집단소송 | class action, putative class 등 | +10 |")
+    for name, keywords, points in RISK_CRITERIA:
+        kw_str = ", ".join(keywords[:5]) + " 등"
+        lines.append(f"| {name} | {kw_str} | +{points} |")
     lines.append("")
 
     lines.append("</details>\n")
