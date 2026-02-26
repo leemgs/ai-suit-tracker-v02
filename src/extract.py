@@ -140,13 +140,25 @@ def guess_case_title_from_article_title(title: str) -> str:
 
 def reason_heuristic(hay: str) -> str:
     h = hay.lower()
-    if "shadow library" in h or "pirat" in h:
-        return "불법 유통본/해적판 등으로 추정되는 데이터 활용 의혹에 따른 저작권 침해."
-    if "youtube" in h and ("dmca" in h or "circumvent" in h or "technical protection" in h):
-        return "유튜브 콘텐츠를 무단 수집해 AI 학습에 사용하고 기술적 보호조치를 우회했다는 취지(저작권/DMCA 등)."
-    if "lyrics" in h or "music publisher" in h:
-        return "저작권 보호 음악/가사 등을 무단으로 학습에 사용했다는 취지(음악 출판사/권리자 저작권 침해)."
-    return "AI 모델 학습을 위해 허가되지 않은(무단/불법) 데이터 사용 의혹(저작권/DMCA/무단 수집 등)."
+    # 1. 특정 서비스/플랫폼/데이터 기반
+    if "shadow library" in h or "pirat" in h or "books3" in h:
+        return "불법 유통본/해적판(Books3 등) 등으로 추정되는 데이터셋을 AI 모델 학습에 활용한 것에 따른 저작권 침해 주장."
+    if "youtube" in h:
+        return "유튜브 콘텐츠를 무단 수집(Scraping)하여 AI 학습에 사용하고, 서비스 약관 및 기술적 보호조치를 위반했다는 주장."
+    if "lyrics" in h or "music publisher" in h or "musical works" in h:
+        return "저작물인 음악 가사 및 곡 정보를 무단으로 학습에 사용하여 권리자의 저작권을 침해했다는 주장."
+    if "news" in h and ("publisher" in h or "journalism" in h):
+        return "언론사의 기사 콘텐츠를 데이터 학습에 무단 활용하여 저작권 및 상업적 가치를 훼손했다는 주장."
+    if "artist" in h and ("style" in h or "artwork" in h):
+        return "예술가의 작품을 무단 학습하여 스타일을 모방하거나 저작권을 부당하게 이용했다는 주장."
+    if "trade secret" in h or "confidential" in h:
+        return "기업의 영업비밀에 해당하는 데이터를 무단 취득하여 AI 모델 개발 등에 활용했다는 의혹."
+
+    # 2. 일반적인 AI 학습 관련 (Keywords based)
+    if any(k in h for k in ["training data", "ai training", "model training"]):
+        return "AI 모델 학습을 위해 허가되지 않은 데이터를 대량으로 수집하여 저작권 및 관련 법규를 위반했다는 취지의 소송."
+
+    return "AI 모델 학습 및 서비스 개발 과정에서의 무단 데이터 수집 및 저작권 침해 관련 분쟁."
 
 def build_lawsuits_from_news(news_items, known_cases, lookback_days: int = 3) -> List[Lawsuit]:
     results: List[Lawsuit] = []
