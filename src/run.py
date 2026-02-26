@@ -167,6 +167,8 @@ def main() -> None:
 
         if m_news:
             line = m_news.group(1).strip()
+            # GitHub용 강조(**)와 🔴 제거 (Slack용으로 재구성하기 위함)
+            line = line.replace("**", "").replace(" 🔴", "")
             # New 수치가 0보다 크면 강조 (Bolding + 🔴)
             slack_dedup_news = re.sub(
                 r"(\d+)\s+\(New\)",
@@ -176,6 +178,8 @@ def main() -> None:
 
         if m_cases:
             line = m_cases.group(1).strip()
+            # GitHub용 강조(**)와 🔴 제거
+            line = line.replace("**", "").replace(" 🔴", "")
             slack_dedup_cases = re.sub(
                 r"(\d+)\s+\(New\)",
                 lambda m: f"*{m.group(1)} (New)*" + (" 🔴" if int(m.group(1)) > 0 else ""),
