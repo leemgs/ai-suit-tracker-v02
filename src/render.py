@@ -56,8 +56,8 @@ RISK_CRITERIA = [
     ("모델 학습 직접 언급", ["train", "training", "model", "llm", "generative ai", "genai", "gpt", "transformer", "weight", "fine-tune", "diffusion", "inference"], 30),
     ("상업적 사용", ["commercial", "profit", "monetiz", "revenue", "subscription", "enterprise", "paid", "for-profit"], 15),
     ("저작권 관련/쟁점", ["copyright", "infringement", "dmca", "fair use", "derivative", "exclusive", "820"], 15),
-    ("데이터 제공 계약/협력", ["contract", "licensing", "agreement", "partnership", "계약", "협력", "제휴"], -10),
     ("집단소송", ["class action", "putative class", "representative"], 10),
+    ("데이터 제공 계약/협력", ["contract", "licensing", "agreement", "partnership", "계약", "협력", "제휴"], -10),
 ]
 
 
@@ -354,6 +354,7 @@ def render_markdown(
     lines.append("")
     
     lines.append("### 📊 등급 기준")
+    lines.append("- -10 ~ 0 🤝 : Data 정식 계약/협력")
     lines.append("-  0~ 39 🟢 : 간접 연관")
     lines.append("- 40~ 59 🟡 : 학습 쟁점 존재")
     lines.append("- 60~ 79 ⚠️ : 모델 학습 직접 언급")
@@ -368,7 +369,6 @@ def render_markdown(
         kw_str = ", ".join(keywords[:5]) + " 등"
         sign = "+" if points > 0 else ""
         lines.append(f"| {name} | {kw_str} | {sign}{points} |")
-    lines.append("\n- **위험도 산정 로직 개선**: 정식 계약/협력 발생 시 위험도 점수를 -10점 차감하여 실제 분쟁 이슈와 차별화하였습니다. (최소 0점 보정 포함)")
     lines.append("")
 
     lines.append("</details>\n")
