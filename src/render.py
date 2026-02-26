@@ -56,6 +56,7 @@ RISK_CRITERIA = [
     ("모델 학습 직접 언급", ["train", "training", "model", "llm", "generative ai", "genai", "gpt", "transformer", "weight", "fine-tune", "diffusion", "inference"], 30),
     ("상업적 사용", ["commercial", "profit", "monetiz", "revenue", "subscription", "enterprise", "paid", "for-profit"], 15),
     ("저작권 관련/쟁점", ["copyright", "infringement", "dmca", "fair use", "derivative", "exclusive", "820"], 15),
+    ("데이터 제공 계약/협력", ["contract", "licensing", "agreement", "partnership", "계약", "협력", "제휴"], -10),
     ("집단소송", ["class action", "putative class", "representative"], 10),
 ]
 
@@ -75,7 +76,7 @@ def calculate_news_risk_score(title: str, reason: str) -> tuple[int, List[str]]:
             # 각 카테고리에서 발견된 첫 2개 키워드만 표시 (너무 길어짐 방지)
             matched_keywords.append(f"{name}: {', '.join(found[:2])}")
 
-    return min(score, 100), matched_keywords
+    return max(0, min(score, 100)), matched_keywords
 
 
 def format_risk(score: int) -> str:
@@ -364,7 +365,8 @@ def render_markdown(
     lines.append("|---|---|---|")
     for name, keywords, points in RISK_CRITERIA:
         kw_str = ", ".join(keywords[:5]) + " 등"
-        lines.append(f"| {name} | {kw_str} | +{points} |")
+        sign = "+" if points > 0 else ""
+        lines.append(f"| {name} | {kw_str} | {sign}{points} |")
     lines.append("")
 
     lines.append("</details>\n")

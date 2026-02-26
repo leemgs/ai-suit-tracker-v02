@@ -153,6 +153,8 @@ def reason_heuristic(hay: str) -> str:
         return "예술가의 작품을 무단 학습하여 스타일을 모방하거나 저작권을 부당하게 이용했다는 주장."
     if "trade secret" in h or "confidential" in h:
         return "기업의 영업비밀에 해당하는 데이터를 무단 취득하여 AI 모델 개발 등에 활용했다는 의혹."
+    if any(k in h for k in ["contract", "licensing", "agreement", "partnership", "계약", "협력", "제휴"]):
+        return "AI 학습용 데이터 공급 계약 또는 제휴 협력과 관련된 소식이며, 권리 관계 및 계약 조건 등이 주요 쟁점입니다."
 
     # 2. 일반적인 AI 학습 관련 (Keywords based)
     if any(k in h for k in ["training data", "ai training", "model training"]):

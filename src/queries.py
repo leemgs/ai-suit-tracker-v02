@@ -14,4 +14,5 @@ NEWS_QUERIES = [
     '("AI training" OR "model training" OR LLM) (lawsuit OR sued OR litigation) (copyright OR pirated OR unauthorized OR "shadow library" OR scraping) when:3d',
     '(Anthropic OR OpenAI OR Google OR Meta OR "Snap Inc" OR "Perplexity AI") (lawsuit OR sued) (training data OR dataset OR copyright OR DMCA) when:3d',
     '("DMCA" OR "copyright infringement") ("AI model" OR "AI training" OR "training data") when:3d',
+    '("AI data contract" OR "AI 데이터 계약" OR "data licensing agreement") when:3d',
 ]
