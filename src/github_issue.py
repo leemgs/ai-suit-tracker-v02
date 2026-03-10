@@ -1,6 +1,7 @@
 from __future__ import annotations
 import requests
-from typing import Dict
+from typing import Dict, List
+from .dedup import generate_consolidated_report
 
 def _headers(token: str) -> Dict[str, str]:
     return {
@@ -73,7 +74,22 @@ def close_other_daily_issues(owner: str, repo: str, token: str, label: str, base
         # base_title (YYYY-MM-DD) 형태만 닫기
         if t.startswith(prefix) and t.endswith(")"):
             num = int(it["number"])
-            comment_and_close_issue(owner, repo, token, num, footer)
+            
+            # [추가] 이슈를 닫기 전에 모든 댓글을 취합하여 통합 리포트 작성
+            try:
+                comments = list_comments(owner, repo, token, num)
+                consolidated_report = generate_consolidated_report(comments)
+                final_body = (
+                    f"{consolidated_report}\n\n"
+                    f"---\n\n"
+                    f"{footer}"
+                )
+            except Exception as e:
+                import sys
+                print(f"Error generating consolidated report for issue #{num}: {e}", file=sys.stderr)
+                final_body = footer
+
+            comment_and_close_issue(owner, repo, token, num, final_body)
             closed.append(num)
     return closed
 

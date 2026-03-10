@@ -178,3 +178,88 @@ def apply_deduplication(md: str, comments: List[dict]) -> str:
     )
 
     return summary_header + current_md
+
+
+def generate_consolidated_report(comments: List[dict]) -> str:
+    """
+    모든 댓글의 내용을 취합하여 통합된 리포트를 생성합니다.
+    """
+    if not comments:
+        return "수집된 리포트 내용이 없습니다."
+
+    unique_news = {}  # URL -> row list
+    unique_cases = {}  # Docket -> row list
+
+    news_header_line = None
+    news_sep_line = None
+    news_header_cols = []
+
+    case_header_line = None
+    case_sep_line = None
+    case_header_cols = []
+
+    for comment in comments:
+        body = comment.get("body") or ""
+
+        # 1) News 파이싱
+        news_section = extract_section(body, "## 📰 AI Regulation News") or extract_section(body, "## 📰 News")
+        h_news, r_news, meta_news = parse_table(news_section)
+        if h_news and "제목" in h_news:
+            title_idx = h_news.index("제목")
+            if not news_header_line:
+                news_header_cols = h_news
+                news_header_line, news_sep_line = meta_news
+            
+            for r in r_news:
+                url = extract_article_url(r[title_idx])
+                key = url if url else r[title_idx]
+                if key not in unique_news:
+                    unique_news[key] = r
+
+        # 2) Cases 파싱
+        recap_section = extract_section(body, "## ⚖️ Cases")
+        h_cases, r_cases, meta_cases = parse_table(recap_section)
+        if h_cases and "도켓번호" in h_cases:
+            docket_idx = h_cases.index("도켓번호")
+            if not case_header_line:
+                case_header_cols = h_cases
+                case_header_line, case_sep_line = meta_cases
+            
+            for r in r_cases:
+                docket = r[docket_idx]
+                if docket not in unique_cases:
+                    unique_cases[docket] = r
+
+    lines = ["## 📑 당일 소송건들 통합 정리 자료\n"]
+
+    # News 통합 출력
+    lines.append("### 📰 통합 AI Regulation News")
+    if unique_news:
+        lines.append(news_header_line)
+        lines.append(news_sep_line)
+        no_idx = news_header_cols.index("No.") if "No." in news_header_cols else None
+        for i, r in enumerate(unique_news.values(), 1):
+            row = list(r)
+            if no_idx is not None:
+                row[no_idx] = str(i)
+            lines.append("| " + " | ".join(row) + " |")
+    else:
+        lines.append("수집된 뉴스 소식이 없습니다.")
+    lines.append("")
+
+    # Cases 통합 출력
+    lines.append("### ⚖️ 통합 Cases (Courtlistener+RECAP)")
+    if unique_cases:
+        lines.append(case_header_line)
+        lines.append(case_sep_line)
+        no_idx = case_header_cols.index("No.") if "No." in case_header_cols else None
+        for i, r in enumerate(unique_cases.values(), 1):
+            row = list(r)
+            if no_idx is not None:
+                row[no_idx] = str(i)
+            lines.append("| " + " | ".join(row) + " |")
+    else:
+        lines.append("수집된 사건 소식이 없습니다.")
+    lines.append("")
+
+    return "\n".join(lines)
