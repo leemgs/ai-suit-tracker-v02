@@ -133,7 +133,7 @@ def render_markdown(
     lines: List[str] = []
 
     # KPI (간결 텍스트 요약)
-    lines.append(f"## 📊 최근 {lookback_days}일 규제 동향 요약")
+    lines.append(f"## 📊 최근 {lookback_days}일 소송 동향 요약")
     lines.append(f"└ 📰 News: {len(lawsuits)}")
     lines.append(f"└ ⚖ Cases: {len(cl_cases)} (Docs: {recap_doc_count})\n")
 
@@ -152,8 +152,8 @@ def render_markdown(
 
     # AI 소송 Top3 (업데이트 날짜 기준)
     if cl_cases:
-        debug_log("'최근 소송 Top 3 (업데이트 날짜 기준)' is printed.")        
-        lines.append("## 🧠 최근 소송 Top 3 (업데이트 날짜 기준)\n")
+        debug_log("'최근 \"820 Copyright\" 소송 Top 3 (업데이트 날짜 기준)' is printed.")        
+        lines.append("## 🧠 최근 \"820 Copyright\" 소송 Top 3 (업데이트 날짜 기준)\n")
         
         # 820 Copyright 항목들만 필터링
         copyright_cases = [c for c in cl_cases if c.nature_of_suit and "820" in c.nature_of_suit]
