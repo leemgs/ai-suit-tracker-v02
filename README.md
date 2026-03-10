@@ -71,9 +71,9 @@ Repository → Settings → Secrets and variables → Actions → Variables 탭
 | 항목 | 조건 (주요 키워드) | 점수 |
 |---|---|---|
 | 무단 데이터 수집 명시 | scrape, crawl, ingest, harvest, mining, bulk, robots.txt, unauthorized 등 | +30 |
-| 모델 학습 직접 언급 | train, model, llm, generative ai, gpt, transformer, diffusion, inference 등 | +30 |
+| 모델 학습 직접 언급 | Nature=820, train, model, llm, generative ai, gpt, transformer, diffusion, inference 등 | +30 |
+| 저작권 소송/쟁점 | copyright, infringement, dmca, fair use, exclusive 등 | +15 |
 | 상업적 사용 | commercial, profit, monetiz, revenue, subscription, enterprise 등 | +15 |
-| 저작권 소송/쟁점 | Nature=820, copyright, infringement, dmca, fair use, exclusive 등 | +30 |
 | 집단소송 | class action, putative class, representative 등 | +10 |
 
 - **80~100 🔥**: 무단 수집 + 학습 + 상업적 사용 (고위험 리스크)
