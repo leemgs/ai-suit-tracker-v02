@@ -71,7 +71,7 @@ Repository → Settings → Secrets and variables → Actions → Variables 탭
 
 | 항목 | 조건 (주요 키워드) | 점수 |
 |---|---|---|
-| **저작권 직접 언급** | NOS 코드 820, 3820 또는 'copyright' 키워드 명시 | +30 |
+| **저작권 직접 언급** | 820, 3820, 'copyright' 등 | +30 |
 | **무단 데이터 수집 명시** | scrape, crawl, ingest, harvest, mining, unauthorized 등 | +25 |
 | **모델 학습 직접 언급** | train, training, model, llm, generative ai, diffusion 등 | +20 |
 | **저작권 관련/쟁점** | infringement, dmca, fair use, derivative, exclusive 등 | +10 |
