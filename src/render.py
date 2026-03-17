@@ -177,7 +177,13 @@ def render_markdown(
 
         for idx, c in enumerate(top_cases, start=1):
             update_date = c.recent_updates if c.recent_updates != "미확인" else ""
-            lines.append(f"**({idx}) {_esc(update_date or '미확인')}, {_esc(c.case_name)}**")
+            
+            # CourtListener 링크 생성
+            slug = _slugify_case_name(c.case_name)
+            docket_url = f"https://www.courtlistener.com/docket/{c.docket_id}/{slug}/"
+            
+            full_title = f"({idx}) {update_date or '미확인'}, {c.case_name}"
+            lines.append(f"**{_mdlink(full_title, docket_url)}**")
             
             # Nature
             nature_val = _esc(c.nature_of_suit)
@@ -185,6 +191,7 @@ def render_markdown(
                 nature_val = "⚠️**820 Copyright**"
             
             lines.append(f"   - **Nature**: {nature_val}")
+            lines.append(f"   - **도켓번호**: {_esc(c.docket_number or '미확인')}")
             lines.append(f"   - **소송이유**: {_esc(c.extracted_causes or c.cause or '미확인')}")
             
             # AI학습관련 핵심주장 (Snippet)
