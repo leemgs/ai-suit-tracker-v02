@@ -163,11 +163,12 @@ def render_markdown(
 
     # AI 소송 Top3 (업데이트 날짜 기준)
     if cl_cases:
-        debug_log("'최근 \"820 Copyright\" 소송 Top 3 (업데이트 날짜 기준)' is printed.")        
-        lines.append("## 🧠 최근 \"820 Copyright\" 소송 Top 3 (업데이트 날짜 기준)\n")
-        
-        # 820 Copyright 항목들만 필터링
-        copyright_cases = [c for c in cl_cases if c.nature_of_suit and "820" in c.nature_of_suit]
+        # 820 Copyright 항목들만 필터링 (820, 저작권, Copyright 키워드 포함 시)
+        copyright_cases = []
+        for c in cl_cases:
+            nos = str(c.nature_of_suit or "").strip()
+            if "820" in nos or "copyright" in nos.lower():
+                copyright_cases.append(c)
         
         top_cases = sorted(
             copyright_cases,
@@ -175,31 +176,39 @@ def render_markdown(
             reverse=True
         )[:3]
 
-        for idx, c in enumerate(top_cases, start=1):
-            update_date = c.recent_updates if c.recent_updates != "미확인" else ""
+        if top_cases:
+            debug_log(f"Rendering Top 3 Copyright cases: {len(top_cases)} found")
+            lines.append("## 🧠 최근 \"820 Copyright\" 소송 Top 3 (업데이트 날짜 기준)\n")
             
-            # CourtListener 링크 생성
-            slug = _slugify_case_name(c.case_name)
-            docket_url = f"https://www.courtlistener.com/docket/{c.docket_id}/{slug}/"
-            
-            full_title = f"({idx}) {update_date or '미확인'}, {c.case_name}"
-            lines.append(f"**{_mdlink(full_title, docket_url)}**")
-            
-            # Nature
-            nature_val = _esc(c.nature_of_suit)
-            if nature_val == "820 Copyright":
-                nature_val = "⚠️**820 Copyright**"
-            
-            lines.append(f"   - **Nature**: {nature_val}")
-            lines.append(f"   - **도켓번호**: {_esc(c.docket_number or '미확인')}")
-            lines.append(f"   - **소송이유**: {_esc(c.extracted_causes or c.cause or '미확인')}")
-            
-            # AI학습관련 핵심주장 (Snippet)
-            if c.extracted_ai_snippet:
-                lines.append(f"   - **AI학습관련 핵심주장**: {_short(c.extracted_ai_snippet, 200)}")
-            else:
-                lines.append(f"   - **AI학습관련 핵심주장**: 미확인")
-            lines.append("")
+            for idx, c in enumerate(top_cases, start=1):
+                update_date = c.recent_updates if c.recent_updates != "미확인" else ""
+                
+                # CourtListener 링크 생성
+                slug = _slugify_case_name(c.case_name)
+                docket_url = f"https://www.courtlistener.com/docket/{c.docket_id}/{slug}/"
+                
+                full_title = f"({idx}) {update_date or '미확인'}, {c.case_name}"
+                lines.append(f"**{_mdlink(full_title, docket_url)}**")
+                
+                # Nature (820 Copyright 강조)
+                nature_val = str(c.nature_of_suit or "미확인").strip()
+                if "820" in nature_val:
+                    nature_display = f"⚠️**{_esc(nature_val)}**"
+                else:
+                    nature_display = _esc(nature_val)
+                
+                lines.append(f"   - **Nature**: {nature_display}")
+                lines.append(f"   - **도켓번호**: {_esc(c.docket_number or '미확인')}")
+                lines.append(f"   - **소송이유**: {_esc(c.extracted_causes or c.cause or '미확인')}")
+                
+                # AI학습관련 핵심주장 (Snippet)
+                if c.extracted_ai_snippet:
+                    lines.append(f"   - **AI학습관련 핵심주장**: {_short(c.extracted_ai_snippet, 200)}")
+                else:
+                    lines.append(f"   - **AI학습관련 핵심주장**: 미확인")
+                lines.append("")
+        else:
+            debug_log("No 820 Copyright cases found for Top 3 section.")
 
     # 뉴스 테이블
     lines.append("## 📰 AI Suit News")

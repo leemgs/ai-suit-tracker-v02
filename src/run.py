@@ -213,7 +213,12 @@ def main() -> None:
     slack_lines.append(f":link: GitHub: <{issue_url}|#{issue_no}>")
 
     # 🆕 최신 RECAP 문서 (820 Copyright) - Top 3
-    copyright_cases = [c for c in cl_cases if c.nature_of_suit and "820" in c.nature_of_suit]
+    copyright_cases = []
+    for c in cl_cases:
+        nos = str(c.nature_of_suit or "").strip()
+        if "820" in nos or "copyright" in nos.lower():
+            copyright_cases.append(c)
+
     top_cases = sorted(
         copyright_cases,
         key=lambda x: x.recent_updates if x.recent_updates != "미확인" else "",
